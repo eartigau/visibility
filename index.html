@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Constellation Finder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://pyscript.net/releases/2025.3.1/core.css" />
+  <script type="module" src="https://pyscript.net/releases/2025.3.1/core.js"></script>
+  <style>
+    :root {
+      --bg-deep:  #020817;
+      --card-bg:  rgba(6, 14, 36, 0.84);
+      --border:   rgba(120, 160, 255, 0.14);
+      --ink:      #e8f0ff;
+      --ink-dim:  #7a90b8;
+      --gold:     #f0c040;
+      --accent:   #4a9eff;
+      --accent-2: #a0c8ff;
+      --ok:       #7eeab0;
+      --warn:     #ffe080;
+      --error:    #ff8a8a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Space Grotesk","Segoe UI",sans-serif; color: var(--ink); background: var(--bg-deep); min-height: 100vh; overflow-x: hidden; }
+    #starfield { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .nebula { position: fixed; border-radius: 999px; filter: blur(90px); pointer-events: none; z-index: 0; }
+    .nb1 { width:600px; height:400px; top:-120px; right:-80px;  background:rgba(80,20,180,.25); animation:drift 18s ease-in-out infinite; }
+    .nb2 { width:500px; height:350px; bottom:-80px; left:-100px; background:rgba(10,40,140,.30); animation:drift 22s ease-in-out infinite reverse; }
+    .nb3 { width:280px; height:180px; top:45%; left:28%;        background:rgba(60,0,120,.15);  animation:drift 14s ease-in-out infinite 4s; }
+    @keyframes drift { 0%,100%{transform:translate(0,0) scale(1);} 33%{transform:translate(20px,-15px) scale(1.04);} 66%{transform:translate(-15px,10px) scale(.97);} }
+    .wrap { position:relative; z-index:1; width:min(780px,94%); margin:0 auto; padding:3rem 0 4rem; }
+    /* ── language toggle ── */
+    .topbar { display:flex; justify-content:flex-end; margin-bottom:1.2rem; }
+    .lang-toggle { display:inline-flex; align-items:center; gap:.25rem; padding:.2rem; border:1px solid var(--border); border-radius:999px; background:rgba(10,20,50,.7); backdrop-filter:blur(6px); }
+    .lang-toggle button { padding:.3rem .7rem; border-radius:999px; border:none; background:transparent; color:var(--ink-dim); font-size:.8rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; transition:background .15s,color .15s; font-family:"Space Grotesk",sans-serif; }
+    .lang-toggle button.active { background:linear-gradient(135deg,#2a60d0,#5a9aff); color:#fff; }
+    /* ── header ── */
+    .site-header { text-align:center; margin-bottom:2.2rem; }
+    .site-icon { font-size:2.8rem; line-height:1; margin-bottom:.45rem; filter:drop-shadow(0 0 18px rgba(240,192,64,.65)); animation:twinkle-icon 3.5s ease-in-out infinite; }
+    @keyframes twinkle-icon { 0%,100%{opacity:1;filter:drop-shadow(0 0 18px rgba(240,192,64,.65));} 50%{opacity:.88;filter:drop-shadow(0 0 32px rgba(240,192,64,.95));} }
+    h1 { font-family:"Exo 2",sans-serif; font-size:2.6rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; background:linear-gradient(135deg,#fff 0%,var(--gold) 50%,var(--accent-2) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .tagline { margin-top:.5rem; color:var(--ink-dim); font-size:.93rem; letter-spacing:.08em; text-transform:uppercase; }
+    /* ── card ── */
+    .card { background:var(--card-bg); border:1px solid var(--border); border-radius:20px; padding:2rem; backdrop-filter:blur(14px); box-shadow:0 20px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06); }
+    .search-row { display:flex; gap:.7rem; margin-bottom:1rem; }
+    #star_name { flex:1; background:rgba(10,20,50,.8); border:1px solid rgba(100,140,255,.25); border-radius:12px; padding:.75rem 1rem; font-size:1.05rem; font-family:"Space Grotesk",sans-serif; color:var(--ink); outline:none; transition:border-color .2s; }
+    #star_name::placeholder { color:var(--ink-dim); opacity:.7; }
+    #star_name:focus { border-color:rgba(100,160,255,.55); }
+    #star_name:disabled { opacity:.5; cursor:wait; }
+    #find_btn { background:linear-gradient(135deg,#2a60d0 0%,#5a9aff 100%); color:#fff; border:none; border-radius:12px; padding:.75rem 1.4rem; font-size:1rem; font-family:"Space Grotesk",sans-serif; font-weight:700; cursor:pointer; transition:transform .12s,filter .12s; white-space:nowrap; }
+    #find_btn:hover:not(:disabled) { transform:translateY(-1px); filter:brightness(1.1); }
+    #find_btn:disabled { opacity:.5; cursor:wait; transform:none; }
+    .examples { display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.2rem; align-items:center; }
+    .ex-label { color:var(--ink-dim); font-size:.82rem; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
+    .chip { display:inline-block; padding:.28rem .7rem; border-radius:999px; border:1px solid rgba(100,160,255,.25); background:rgba(40,60,120,.4); color:var(--accent-2); font-size:.85rem; cursor:pointer; transition:background .15s,border-color .15s; user-select:none; }
+    .chip:hover { background:rgba(60,90,180,.55); border-color:rgba(100,160,255,.5); }
+    /* ── status / result ── */
+    #status { margin-bottom:.8rem; min-height:1rem; }
+    .msg { display:flex; align-items:flex-start; gap:.55rem; padding:.6rem .85rem; border-radius:10px; font-size:.95rem; word-break:break-word; }
+    .msg.ok    { background:rgba(20,50,100,.5);  color:var(--accent-2); }
+    .msg.warn  { background:rgba(80,60,0,.5);    color:var(--warn); }
+    .msg.error { background:rgba(80,15,15,.5);   color:var(--error); }
+    .spinner { flex:0 0 auto; width:14px; height:14px; border:2px solid rgba(255,255,255,.2); border-top-color:var(--accent); border-radius:50%; animation:spin .75s linear infinite; margin-top:2px; }
+    @keyframes spin { to{transform:rotate(360deg);} }
+    .result-card { background:linear-gradient(135deg,rgba(10,20,60,.72) 0%,rgba(20,5,50,.72) 100%); border:1px solid rgba(120,170,255,.18); border-radius:16px; padding:1.8rem; text-align:center; animation:fadeIn .4s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:none;} }
+    .star-label { color:var(--ink-dim); font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; margin-bottom:.3rem; }
+    .star-id { color:var(--gold); font-family:"Exo 2",sans-serif; font-size:1.3rem; font-weight:600; margin-bottom:1.3rem; }
+    .const-abbr { display:inline-block; padding:.25rem .7rem; border-radius:8px; background:rgba(240,192,64,.15); border:1px solid rgba(240,192,64,.3); color:var(--gold); font-family:"Exo 2",monospace; font-size:.9rem; letter-spacing:.12em; margin-bottom:.65rem; }
+    .const-name { font-family:"Exo 2",sans-serif; font-size:3rem; font-weight:800; letter-spacing:.04em; background:linear-gradient(135deg,#fff 0%,var(--accent-2) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1.1; margin-bottom:.4rem; }
+    .const-meaning { color:var(--ink-dim); font-size:1.05rem; font-style:italic; margin-bottom:1.4rem; }
+    .divider { height:1px; background:linear-gradient(90deg,transparent,rgba(100,160,255,.25),transparent); margin:1.2rem 0; }
+    .info-chips { display:flex; flex-wrap:wrap; gap:.7rem; justify-content:center; margin-bottom:1.3rem; }
+    .info-chip { display:flex; flex-direction:column; align-items:center; padding:.55rem 1.1rem; border-radius:12px; border:1px solid var(--border); background:rgba(10,20,50,.6); min-width:130px; }
+    .info-chip .label { font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:.2rem; }
+    .info-chip .value { font-family:"Exo 2",monospace; font-size:.93rem; color:var(--ink); font-weight:600; }
+    .const-desc { color:var(--ink-dim); font-size:.9rem; line-height:1.6; max-width:540px; margin:0 auto; }
+    .simbad-link { display:inline-block; margin-top:1rem; color:var(--accent); font-size:.85rem; text-decoration:none; letter-spacing:.04em; border-bottom:1px solid transparent; transition:border-color .15s; }
+    .simbad-link:hover { border-bottom-color:var(--accent); }
+    .footer { text-align:center; margin-top:2rem; color:var(--ink-dim); font-size:.82rem; opacity:.65; }
+    .footer a { color:var(--accent); text-decoration:none; }
+    .footer a:hover { text-decoration:underline; }
+    .coord-hint { margin:-0.3rem 0 1.1rem; color:var(--ink-dim); font-size:.82rem; line-height:1.55; }
+    .coord-hint code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.82rem; background:rgba(100,160,255,.1); border:1px solid rgba(100,160,255,.2); border-radius:4px; padding:.05em .35em; color:var(--accent-2); white-space:nowrap; }
+    @media (max-width:520px) { h1{font-size:1.9rem;} .search-row{flex-direction:column;} .const-name{font-size:2.2rem;} }
+  </style>
+</head>
+<body>
+  <canvas id="starfield"></canvas>
+  <div class="nebula nb1"></div>
+  <div class="nebula nb2"></div>
+  <div class="nebula nb3"></div>
+
+  <div class="wrap">
+    <div class="topbar">
+      <div class="lang-toggle" aria-label="Language / Langue">
+        <button id="btn_en" type="button">EN</button>
+        <button id="btn_fr" type="button">FR</button>
+      </div>
+    </div>
+
+    <div class="site-header">
+      <div class="site-icon">✦</div>
+      <h1 id="t_title">Constellation Finder</h1>
+      <p class="tagline" id="t_tagline">Enter a star name — discover its place among the constellations</p>
+    </div>
+
+    <div class="card">
+      <div class="search-row">
+        <input id="star_name" type="text" autocomplete="off" spellcheck="false" />
+        <button id="find_btn" type="button">Find Constellation</button>
+      </div>
+      <div class="examples">
+        <span class="ex-label" id="t_try">Try:</span>
+        <span class="chip" data-name="Sirius">Sirius</span>
+        <span class="chip" data-name="Betelgeuse">Betelgeuse</span>
+        <span class="chip" data-name="Polaris">Polaris</span>
+        <span class="chip" data-name="Vega">Vega</span>
+        <span class="chip" data-name="Rigel">Rigel</span>
+        <span class="chip" data-name="Arcturus">Arcturus</span>
+        <span class="chip" data-name="Antares">Antares</span>
+        <span class="chip" data-name="Alpha Centauri">Alpha Centauri</span>
+      </div>
+      <p class="coord-hint" id="t_coord_hint">
+        Or enter coordinates directly: <code>101.287 −16.716</code> (decimal °) &nbsp;·&nbsp;
+        <code>06:44:59 −16:42:58</code> (sexagesimal RA Dec) &nbsp;·&nbsp;
+        <code>06h44m59s −16d42m58s</code> (h m s / d m s)
+      </p>
+      <div id="status"></div>
+      <div id="result"></div>
+    </div>
+
+    <div class="footer" id="t_footer">
+      Star data via <a href="https://simbad.cds.unistra.fr/" target="_blank">SIMBAD</a>
+      (CDS, Strasbourg) &nbsp;·&nbsp; Constellation boundaries: IAU / Roman (1987) / Delporte (1930)
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    /* ── i18n strings ── */
+    const STRINGS = {
+      en: {
+        title:       "Constellation Finder",
+        tagline:     "Enter a star name — or coordinates — to discover its constellation",
+        placeholder: "Star name, or: 101.287 −16.716 / 06:44:59 −16:42:58",
+        btn:         "Find Constellation",
+        try:         "Try:",
+        footer:      'Star data via <a href="https://simbad.cds.unistra.fr/" target="_blank">SIMBAD</a> (CDS, Strasbourg) &nbsp;·&nbsp; Constellation boundaries: IAU / Roman (1987) / Delporte (1930)',
+        coordHint:   'Or enter coordinates: <code>101.287 −16.716</code> (decimal °) &nbsp;·&nbsp; <code>06:44:59 −16:42:58</code> (sexagesimal) &nbsp;·&nbsp; <code>06h44m59s −16d42m58s</code> (h m s / d m s)',
+      },
+      fr: {
+        title:       "Chercheur de Constellations",
+        tagline:     "Entrez un nom d'étoile — ou des coordonnées — pour trouver sa constellation",
+        placeholder: "Nom d'étoile, ou : 101.287 −16.716 / 06:44:59 −16:42:58",
+        btn:         "Trouver la constellation",
+        try:         "Essayez :",
+        footer:      'Données via <a href="https://simbad.cds.unistra.fr/" target="_blank">SIMBAD</a> (CDS, Strasbourg) &nbsp;·&nbsp; Frontières IAU / Roman (1987) / Delporte (1930)',
+        coordHint:   'Ou entrez des coordonnées : <code>101.287 −16.716</code> (degrés décimaux) &nbsp;·&nbsp; <code>06:44:59 −16:42:58</code> (sexagésimal) &nbsp;·&nbsp; <code>06h44m59s −16d42m58s</code> (h m s / d m s)',
+      },
+    };
+
+    /* ── language detection & persistence ── */
+    function detectLang() {
+      const saved = localStorage.getItem("consfinder_lang");
+      if (saved === "fr" || saved === "en") return saved;
+      const nav = (navigator.language || navigator.userLanguage || "en").toLowerCase();
+      return nav.startsWith("fr") ? "fr" : "en";
+    }
+
+    let LANG = detectLang();
+    window.SITE_LANG = LANG;
+
+    function applyLang() {
+      const s = STRINGS[LANG];
+      document.documentElement.lang = LANG;
+      document.title = s.title;
+      document.getElementById("t_title").textContent    = s.title;
+      document.getElementById("t_tagline").textContent  = s.tagline;
+      document.getElementById("star_name").placeholder  = s.placeholder;
+      document.getElementById("find_btn").textContent   = s.btn;
+      document.getElementById("t_try").textContent      = s.try;
+      document.getElementById("t_footer").innerHTML     = s.footer;
+      document.getElementById("t_coord_hint").innerHTML = s.coordHint;
+      document.getElementById("btn_en").classList.toggle("active", LANG === "en");
+      document.getElementById("btn_fr").classList.toggle("active", LANG === "fr");
+      window.SITE_LANG = LANG;
+      /* re-render result if Python is ready */
+      if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.rerender) {
+        window.CONSTFINDER_BOOT.rerender();
+      }
+    }
+
+    function setLang(l) {
+      LANG = l;
+      localStorage.setItem("consfinder_lang", l);
+      applyLang();
+    }
+
+    /* ── starfield canvas ── */
+    const canvas = document.getElementById("starfield");
+    const ctx    = canvas.getContext("2d");
+    let stars    = [];
+    function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
+    function makeStar() {
+      return { x: Math.random()*canvas.width, y: Math.random()*canvas.height,
+               r: Math.random()*1.3+.18, base: Math.random()*.55+.08,
+               phase: Math.random()*Math.PI*2, speed: Math.random()*.008+.003,
+               hue: Math.random()<.15 ? Math.random()*60+28 : 220+Math.random()*40 };
+    }
+    function init() { resize(); stars = Array.from({length:280}, makeStar); }
+    function draw(t) {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      for (const s of stars) {
+        const a = s.base + .4*Math.sin(s.phase+t*s.speed);
+        ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+        ctx.fillStyle=`hsla(${s.hue},80%,90%,${a})`; ctx.fill();
+      }
+      requestAnimationFrame(draw);
+    }
+    init(); window.addEventListener("resize", init); requestAnimationFrame(draw);
+
+    /* ── boot bridge ── */
+    window.CONSTFINDER_BOOT = { ready: false, pending: false };
+    function triggerLookup() {
+      const b = window.CONSTFINDER_BOOT;
+      if (b.ready && typeof b.doLookup === "function") { b.doLookup(); }
+      else {
+        b.pending = true;
+        const s = document.getElementById("status");
+        if (s && !s.innerHTML.trim())
+          s.innerHTML = '<div class="msg ok"><span class="spinner"></span><span>'
+            + (LANG==="fr" ? "Démarrage du moteur Python…" : "Python engine starting…")
+            + '</span></div>';
+      }
+    }
+    window.flushPendingLookup = function () {
+      const b = window.CONSTFINDER_BOOT;
+      if (b.pending && typeof b.doLookup === "function") { b.pending = false; b.doLookup(); }
+    };
+
+    /* ── event wiring ── */
+    document.addEventListener("DOMContentLoaded", function () {
+      document.getElementById("btn_en").addEventListener("click", () => setLang("en"));
+      document.getElementById("btn_fr").addEventListener("click", () => setLang("fr"));
+      document.getElementById("find_btn").addEventListener("click", triggerLookup);
+      document.getElementById("star_name").addEventListener("keydown", e => { if (e.key==="Enter") triggerLookup(); });
+      document.querySelectorAll(".chip").forEach(c =>
+        c.addEventListener("click", () => { document.getElementById("star_name").value = c.getAttribute("data-name"); triggerLookup(); })
+      );
+      applyLang();
+    });
+  })();
+  </script>
+
+  <script type="py">
+import math
+import asyncio
+import js
+from urllib.parse import quote_plus
+from js import document, window
+from pyodide.http import pyfetch
+from pyodide.ffi import create_proxy
+
+# ── IAU constellation boundaries (Roman 1987 / Delporte 1930) ─────────────────
+# (RA_lower_h, RA_upper_h, Dec_low_deg, abbr) in B1875.0 FK4 — first match wins
+_BOUNDARIES = [
+  (0.0,24.0,88.0,"UMi"),(8.0,14.5,86.5,"UMi"),(21.0,23.0,86.1667,"UMi"),(18.0,21.0,86.0,"UMi"),
+  (0.0,8.0,85.0,"Cep"),(9.1667,10.6667,82.0,"Cam"),(0.0,5.0,80.0,"Cep"),(10.6667,14.5,80.0,"Cam"),
+  (17.5,18.0,80.0,"UMi"),(20.1667,21.0,80.0,"Dra"),(0.0,3.5083,77.0,"Cep"),(11.5,13.5833,77.0,"Cam"),
+  (16.5333,17.5,75.0,"UMi"),(20.1667,20.6667,75.0,"Cep"),(7.9667,9.1667,73.5,"Cam"),(9.1667,11.3333,73.5,"Dra"),
+  (13.0,16.5333,70.0,"UMi"),(3.1,3.4167,68.0,"Cas"),(20.4167,20.6667,67.0,"Dra"),(11.3333,12.0,66.5,"Dra"),
+  (0.0,0.3333,66.0,"Cep"),(14.0,15.6667,66.0,"UMi"),(23.5833,24.0,66.0,"Cep"),(12.0,13.5,64.0,"Dra"),
+  (13.5,14.4167,63.0,"Dra"),(23.1667,23.5833,63.0,"Cep"),(6.1,7.0,62.0,"Cam"),(20.0,20.4167,61.5,"Dra"),
+  (20.5367,20.6,60.9167,"Cep"),(7.0,7.9667,60.0,"Cam"),(7.9667,8.4167,60.0,"UMa"),(19.7667,20.0,59.5,"Dra"),
+  (20.0,20.5367,59.5,"Cep"),(22.8667,23.1667,59.0833,"Cep"),(0.0,2.4333,58.5,"Cas"),(19.4167,19.7667,58.0,"Dra"),
+  (1.7,1.9083,57.5,"Cas"),(2.4333,3.1,57.0,"Cas"),(3.1,3.1667,57.0,"Cam"),(22.3167,22.8667,56.25,"Cep"),
+  (5.0,6.1,56.0,"Cam"),(14.0333,14.4167,55.5,"UMa"),(14.4167,19.4167,55.5,"Dra"),(3.1667,3.3333,55.0,"Cam"),
+  (22.1333,22.3167,55.0,"Cep"),(20.6,21.9667,54.8333,"Cep"),(0.0,1.7,54.0,"Cas"),(6.1,6.5,54.0,"Lyn"),
+  (12.0833,13.5,53.0,"UMa"),(15.25,15.75,53.0,"Dra"),(21.9667,22.1333,52.75,"Cep"),(3.3333,5.0,52.5,"Cam"),
+  (22.8667,23.3333,52.5,"Cas"),(15.75,17.0,51.5,"Dra"),(2.0417,2.5167,50.5,"Per"),(17.0,18.2333,50.5,"Dra"),
+  (0.0,1.3667,50.0,"Cas"),(1.3667,1.6667,50.0,"Per"),(6.5,6.8,50.0,"Lyn"),(23.3333,24.0,50.0,"Cas"),
+  (13.5,14.0333,48.5,"UMa"),(0.0,1.1167,48.0,"Cas"),(23.5833,24.0,48.0,"Cas"),(18.175,18.2333,47.5,"Her"),
+  (18.2333,19.0833,47.5,"Dra"),(19.0833,19.1667,47.5,"Cyg"),(1.6667,2.0417,47.0,"Per"),(8.4167,9.1667,47.0,"UMa"),
+  (0.1667,0.8667,46.0,"Cas"),(12.0,12.0833,45.0,"UMa"),(6.8,7.3667,44.5,"Lyn"),(21.9083,21.9667,44.0,"Cyg"),
+  (21.875,21.9083,43.75,"Cyg"),(19.1667,19.4,43.5,"Cyg"),(9.1667,10.1667,42.0,"UMa"),(10.1667,10.7833,40.0,"UMa"),
+  (15.4333,15.75,40.0,"Boo"),(15.75,16.3333,40.0,"Her"),(9.25,9.5833,39.75,"Lyn"),(0.0,2.5167,36.75,"And"),
+  (2.5167,2.5667,36.75,"Per"),(19.3583,19.4,36.5,"Lyr"),(4.5,4.6917,36.0,"Per"),(21.7333,21.875,36.0,"Cyg"),
+  (21.875,22.0,36.0,"Lac"),(6.5333,7.3667,35.5,"Aur"),(7.3667,7.75,35.5,"Lyn"),(0.0,2.0,35.0,"And"),
+  (22.0,22.8167,35.0,"Lac"),(22.8167,22.8667,34.5,"Lac"),(22.8667,23.5,34.5,"And"),(2.5667,2.7167,34.0,"Per"),
+  (10.7833,11.0,34.0,"UMa"),(12.0,12.3333,34.0,"CVn"),(7.75,9.25,33.5,"Lyn"),(9.25,9.8833,33.5,"LMi"),
+  (0.7167,1.4083,33.0,"And"),(15.1833,15.4333,33.0,"Boo"),(23.5,23.75,32.0833,"And"),(12.3333,13.25,32.0,"CVn"),
+  (23.75,24.0,31.3333,"And"),(13.9583,14.0333,30.75,"CVn"),(2.4167,2.7167,30.6667,"Tri"),(2.7167,4.5,30.6667,"Per"),
+  (4.5,4.75,30.0,"Aur"),(18.175,19.3583,30.0,"Lyr"),(11.0,12.0,29.0,"UMa"),(19.6667,20.9167,29.0,"Cyg"),
+  (4.75,5.8833,28.5,"Aur"),(9.8833,10.5,28.5,"LMi"),(13.25,13.9583,28.5,"CVn"),(0.0,0.0667,28.0,"And"),
+  (1.4083,1.6667,28.0,"Tri"),(5.8833,6.5333,28.0,"Aur"),(7.8833,8.0,28.0,"Gem"),(20.9167,21.7333,28.0,"Cyg"),
+  (19.2583,19.6667,27.5,"Cyg"),(1.9167,2.4167,27.25,"Tri"),(16.1667,16.3333,27.0,"CrB"),(15.0833,15.1833,26.0,"Boo"),
+  (15.1833,16.1667,26.0,"CrB"),(18.3667,18.8667,26.0,"Lyr"),(10.75,11.0,25.5,"LMi"),(18.8667,19.2583,25.5,"Lyr"),
+  (1.6667,1.9167,25.0,"Tri"),(0.7167,0.85,23.75,"Psc"),(10.5,10.75,23.5,"LMi"),(21.25,21.4167,23.5,"Vul"),
+  (5.7,5.8833,22.8333,"Tau"),(0.0667,0.1417,22.0,"And"),(15.9167,16.0333,22.0,"Ser"),(5.8833,6.2167,21.5,"Gem"),
+  (19.8333,20.25,21.25,"Vul"),(18.8667,19.25,21.0833,"Vul"),(0.1417,0.85,21.0,"And"),(20.25,20.5667,20.5,"Vul"),
+  (7.8083,7.8833,20.0,"Gem"),(20.5667,21.25,19.5,"Vul"),(19.25,19.8333,19.1667,"Vul"),(3.2833,3.3667,19.0,"Ari"),
+  (18.8667,19.0,18.5,"Sge"),(5.7,5.7667,18.0,"Ori"),(6.2167,6.3083,17.5,"Gem"),(19.0,19.8333,16.1667,"Sge"),
+  (4.9667,5.3333,16.0,"Tau"),(15.9167,16.0833,16.0,"Her"),(19.8333,20.25,15.75,"Sge"),(4.6167,4.9667,15.5,"Tau"),
+  (5.3333,5.6,15.5,"Tau"),(12.8333,13.5,15.0,"Com"),(17.25,18.25,14.3333,"Her"),(11.8667,12.8333,14.0,"Com"),
+  (7.5,7.8083,13.5,"Gem"),(16.75,17.25,12.8333,"Her"),(0.0,0.1417,12.5,"Peg"),(5.6,5.7667,12.5,"Tau"),
+  (7.0,7.5,12.5,"Gem"),(21.1167,21.3333,12.5,"Peg"),(6.3083,6.9333,12.0,"Gem"),(18.25,18.8667,12.0,"Her"),
+  (20.875,21.05,11.8333,"Del"),(21.05,21.1167,11.8333,"Peg"),(11.5167,11.8667,11.0,"Leo"),(6.2417,6.3083,10.0,"Ori"),
+  (6.9333,7.0,10.0,"Gem"),(7.8083,7.925,10.0,"Cnc"),(23.8333,24.0,10.0,"Peg"),(1.6667,3.2833,9.9167,"Ari"),
+  (20.1417,20.3,8.5,"Del"),(13.5,15.0833,8.0,"Boo"),(22.75,23.8333,7.5,"Peg"),(7.925,9.25,7.0,"Cnc"),
+  (9.25,10.75,7.0,"Leo"),(18.25,18.6622,6.25,"Oph"),(18.6622,18.8667,6.25,"Aql"),(20.8333,20.875,6.0,"Del"),
+  (7.0,7.0167,5.5,"CMi"),(18.25,18.425,4.5,"Ser"),(16.0833,16.75,4.0,"Her"),(18.25,18.425,3.0,"Oph"),
+  (21.4667,21.6667,2.75,"Peg"),(0.0,2.0,2.0,"Psc"),(18.5833,18.8667,2.0,"Ser"),(20.3,20.8333,2.0,"Del"),
+  (20.8333,21.3333,2.0,"Equ"),(21.3333,21.4667,2.0,"Peg"),(22.0,22.75,2.0,"Peg"),(21.6667,22.0,1.75,"Peg"),
+  (7.0167,7.2,1.5,"CMi"),(3.5833,4.6167,0.0,"Tau"),(4.6167,4.6667,0.0,"Ori"),(7.2,8.0833,0.0,"CMi"),
+  (14.6667,15.0833,0.0,"Vir"),(17.8333,18.25,0.0,"Oph"),(2.65,3.2833,-1.75,"Cet"),(3.2833,3.5833,-1.75,"Tau"),
+  (15.0833,16.2667,-3.25,"Ser"),(4.6667,5.0833,-4.0,"Ori"),(5.8333,6.2417,-4.0,"Ori"),(17.8333,17.9667,-4.0,"Ser"),
+  (18.25,18.5833,-4.0,"Ser"),(18.5833,18.8667,-4.0,"Aql"),(22.75,23.8333,-4.0,"Psc"),(10.75,11.5167,-6.0,"Leo"),
+  (11.5167,11.8333,-6.0,"Vir"),(0.0,0.3333,-7.0,"Psc"),(23.8333,24.0,-7.0,"Psc"),(14.25,14.6667,-8.0,"Vir"),
+  (15.9167,16.2667,-8.0,"Oph"),(20.0,20.5333,-9.0,"Aql"),(21.3333,21.8667,-9.0,"Aqr"),(17.1667,17.9667,-10.0,"Oph"),
+  (5.8333,8.0833,-11.0,"Mon"),(4.9167,5.0833,-11.0,"Eri"),(5.0833,5.8333,-11.0,"Ori"),(8.0833,8.3667,-11.0,"Hya"),
+  (9.5833,10.75,-11.0,"Sex"),(11.8333,12.8333,-11.0,"Vir"),(17.5833,17.6667,-11.6667,"Oph"),(18.8667,20.0,-12.0333,"Aql"),
+  (4.8333,4.9167,-14.5,"Eri"),(20.5333,21.3333,-15.0,"Aqr"),(17.1667,18.25,-16.0,"Ser"),(18.25,18.8667,-16.0,"Sct"),
+  (8.3667,8.5833,-17.0,"Hya"),(16.2667,16.375,-18.25,"Oph"),(8.5833,9.0833,-19.0,"Hya"),(10.75,10.8333,-19.0,"Crt"),
+  (16.2667,16.375,-19.25,"Sco"),(15.6667,15.9167,-20.0,"Lib"),(12.5833,12.8333,-22.0,"Crv"),(12.8333,14.25,-22.0,"Vir"),
+  (9.0833,9.75,-24.0,"Hya"),(1.6667,2.65,-24.3833,"Cet"),(2.65,3.75,-24.3833,"Eri"),(10.8333,11.8333,-24.5,"Crt"),
+  (11.8333,12.5833,-24.5,"Crv"),(14.25,14.9167,-24.5,"Lib"),(16.2667,16.75,-24.5833,"Oph"),(0.0,1.6667,-25.5,"Cet"),
+  (21.3333,21.8667,-25.5,"Cap"),(21.8667,23.8333,-25.5,"Aqr"),(23.8333,24.0,-25.5,"Cet"),(9.75,10.25,-26.5,"Hya"),
+  (4.7,4.8333,-27.25,"Eri"),(4.8333,6.1167,-27.25,"Lep"),(20.0,21.3333,-28.0,"Cap"),(10.25,10.5833,-29.1667,"Hya"),
+  (12.5833,14.9167,-29.5,"Hya"),(14.9167,15.6667,-29.5,"Lib"),(15.6667,16.0,-29.5,"Sco"),(4.5833,4.7,-30.0,"Eri"),
+  (16.75,17.6,-30.0,"Oph"),(17.6,17.8333,-30.0,"Sgr"),(10.5833,10.8333,-31.1667,"Hya"),(6.1167,7.3667,-33.0,"CMa"),
+  (12.25,12.5833,-33.0,"Hya"),(10.8333,12.25,-35.0,"Hya"),(3.5,3.75,-36.0,"For"),(8.3667,9.3667,-36.75,"Pyx"),
+  (4.2667,4.5833,-37.0,"Eri"),(17.8333,19.1667,-37.0,"Sgr"),(21.3333,23.0,-37.0,"PsA"),(23.0,23.3333,-37.0,"Scl"),
+  (3.0,3.5,-39.5833,"For"),(9.3667,11.0,-39.75,"Ant"),(0.0,1.6667,-40.0,"Scl"),(1.6667,3.0,-40.0,"For"),
+  (3.8667,4.2667,-40.0,"Eri"),(23.3333,24.0,-40.0,"Scl"),(14.1667,14.9167,-42.0,"Cen"),(15.6667,16.0,-42.0,"Lup"),
+  (16.0,16.4208,-42.0,"Sco"),(4.8333,5.0,-43.0,"Cae"),(5.0,6.5833,-43.0,"Col"),(8.0,8.3667,-43.0,"Pup"),
+  (3.4167,3.8667,-44.0,"Eri"),(16.4208,17.8333,-45.5,"Sco"),(17.8333,19.1667,-45.5,"CrA"),(19.1667,20.3333,-45.5,"Sgr"),
+  (20.3333,21.3333,-45.5,"Mic"),(3.0,3.4167,-46.0,"Eri"),(4.5,4.8333,-46.5,"Cae"),(15.3333,15.6667,-48.0,"Lup"),
+  (0.0,2.3333,-48.1667,"Phe"),(2.6667,3.0,-49.0,"Eri"),(4.0833,4.2667,-49.0,"Hor"),(4.2667,4.5,-49.0,"Cae"),
+  (21.3333,22.0,-50.0,"Gru"),(6.0,8.0,-50.75,"Pup"),(8.0,8.1667,-50.75,"Vel"),(2.4167,2.6667,-51.0,"Eri"),
+  (3.8333,4.0833,-51.0,"Hor"),(0.0,1.8333,-51.5,"Phe"),(6.0,6.1667,-52.5,"Car"),(8.1667,8.45,-53.0,"Vel"),
+  (3.5,3.8333,-53.1667,"Hor"),(3.8333,4.0,-53.1667,"Dor"),(0.0,1.5833,-53.5,"Phe"),(2.1667,2.4167,-54.0,"Eri"),
+  (4.5,5.0,-54.0,"Pic"),(15.05,15.3333,-54.0,"Lup"),(8.45,8.8333,-54.5,"Vel"),(6.1667,6.5,-55.0,"Car"),
+  (11.8333,12.8333,-55.0,"Cen"),(14.1667,15.05,-55.0,"Lup"),(15.05,15.3333,-55.0,"Nor"),(4.0,4.3333,-56.5,"Dor"),
+  (8.8333,11.0,-56.5,"Vel"),(11.0,11.25,-56.5,"Cen"),(17.5,18.0,-57.0,"Ara"),(18.0,20.3333,-57.0,"Tel"),
+  (22.0,23.3333,-57.0,"Gru"),(3.2,3.5,-57.5,"Hor"),(5.0,5.5,-57.5,"Pic"),(6.5,6.8333,-58.0,"Car"),
+  (0.0,1.3333,-58.5,"Phe"),(1.3333,2.1667,-58.5,"Eri"),(23.3333,24.0,-58.5,"Phe"),(4.3333,4.5833,-59.0,"Dor"),
+  (15.3333,16.4208,-60.0,"Nor"),(20.3333,21.3333,-60.0,"Ind"),(5.5,6.0,-61.0,"Pic"),(15.1667,15.3333,-61.0,"Cir"),
+  (16.4208,16.5833,-61.0,"Ara"),(14.9167,15.1667,-63.5833,"Cir"),(16.5833,16.75,-63.5833,"Ara"),(6.0,6.8333,-64.0,"Pic"),
+  (6.8333,9.0333,-64.0,"Car"),(11.25,11.8333,-64.0,"Cen"),(11.8333,12.8333,-64.0,"Cru"),(12.8333,14.5333,-64.0,"Cen"),
+  (13.5,13.6667,-65.0,"Cir"),(16.75,16.8333,-65.0,"Ara"),(2.1667,3.2,-67.5,"Hor"),(3.2,4.5833,-67.5,"Ret"),
+  (14.75,14.9167,-67.5,"Cir"),(16.8333,17.5,-67.5,"Ara"),(17.5,18.0,-67.5,"Pav"),(22.0,23.3333,-67.5,"Tuc"),
+  (4.5833,6.5833,-70.0,"Dor"),(13.6667,14.75,-70.0,"Cir"),(14.75,17.0,-70.0,"TrA"),(0.0,1.3333,-75.0,"Tuc"),
+  (3.5,4.5833,-75.0,"Hyi"),(6.5833,9.0333,-75.0,"Vol"),(9.0333,11.25,-75.0,"Car"),(11.25,13.6667,-75.0,"Mus"),
+  (18.0,21.3333,-75.0,"Pav"),(21.3333,23.3333,-75.0,"Ind"),(23.3333,24.0,-75.0,"Tuc"),(0.75,1.3333,-76.0,"Tuc"),
+  (0.0,3.5,-82.5,"Hyi"),(7.6667,13.6667,-82.5,"Cha"),(13.6667,18.0,-82.5,"Aps"),(3.5,7.6667,-85.0,"Men"),
+  (0.0,24.0,-90.0,"Oct"),
+]
+
+# ── Rotation matrix: ICRS (J2000) → B1875.0 FK4 ──────────────────────────────
+_R = [
+  [ 9.9953593068e-01,  2.7935194958e-02,  1.2146940603e-02],
+  [-2.7935194679e-02,  9.9960972189e-01, -1.6972591846e-04],
+  [-1.2146941244e-02, -1.6967999662e-04,  9.9992620879e-01],
+]
+
+def _icrs_to_b1875(ra_deg, dec_deg):
+    ra  = math.radians(ra_deg)
+    dec = math.radians(dec_deg)
+    x = math.cos(dec)*math.cos(ra); y = math.cos(dec)*math.sin(ra); z = math.sin(dec)
+    x2 = _R[0][0]*x+_R[0][1]*y+_R[0][2]*z
+    y2 = _R[1][0]*x+_R[1][1]*y+_R[1][2]*z
+    z2 = _R[2][0]*x+_R[2][1]*y+_R[2][2]*z
+    return (math.degrees(math.atan2(y2,x2))%360.0)/15.0, math.degrees(math.asin(max(-1.0,min(1.0,z2))))
+
+def get_constellation(ra_deg, dec_deg):
+    ra_h, dec_d = _icrs_to_b1875(ra_deg, dec_deg)
+    for ra_l,ra_u,dec_low,cst in _BOUNDARIES:
+        if dec_d >= dec_low and ra_l <= ra_h < ra_u:
+            return cst
+    return None
+
+# ── Bilingual constellation data ──────────────────────────────────────────────
+# (latin_name, (en_meaning, en_desc), (fr_meaning, fr_desc))
+_CDATA = {
+ "And":("Andromeda",
+   ("The Chained Princess","Princess Andromeda, chained to a rock as sacrifice to the sea monster Cetus, was rescued by Perseus. The Andromeda Galaxy (M31) — our nearest large neighbour at 2.5 million light-years — lies within its borders."),
+   ("La Princesse enchaînée","Princesse Andromède, enchaînée en sacrifice au monstre Cetus, fut sauvée par Persée. La galaxie d'Andromède (M31) — notre plus proche grande voisine à 2,5 millions d'années-lumière — s'y trouve.")),
+ "Ant":("Antlia",
+   ("The Air Pump","One of the southern constellations introduced by Lacaille in the 18th century, representing an air pump used in early physical experiments."),
+   ("La Machine pneumatique","L'une des constellations australes introduites par Lacaille au XVIIIe siècle, représentant une pompe à air utilisée dans les premières expériences de physique.")),
+ "Aps":("Apus",
+   ("The Bird of Paradise","A small southern constellation representing the exotic bird of paradise, introduced by Dutch navigators Keyser and de Houtman in the late 16th century."),
+   ("L'Oiseau de paradis","Petite constellation australe représentant l'oiseau de paradis exotique, introduite par les navigateurs néerlandais Keyser et de Houtman à la fin du XVIe siècle.")),
+ "Aqr":("Aquarius",
+   ("The Water Bearer","An ancient zodiacal constellation depicting a figure pouring water. In Babylonian astronomy it was associated with the god Ea, bringer of floods. The Helix Nebula, the largest planetary nebula on the sky, lies here."),
+   ("Le Verseau","Antique constellation zodiacale représentant une figure versant de l'eau. Dans l'astronomie babylonienne, elle était associée au dieu Éa, maître des crues. La grande nébuleuse planétaire Hélix s'y trouve.")),
+ "Aql":("Aquila",
+   ("The Eagle","The eagle that carried Zeus's thunderbolts. The bright star Altair, one vertex of the Summer Triangle, spins so fast it bulges noticeably at its equator."),
+   ("L'Aigle","L'aigle portant les foudres de Zeus. L'étoile brillante Altaïr, un sommet du Triangle d'été, tourne si vite qu'elle est aplatie à son équateur.")),
+ "Ara":("Ara",
+   ("The Altar","The altar upon which the gods of Olympus swore their oath before the Titanomachy — the war between the Olympians and the Titans."),
+   ("L'Autel","L'autel sur lequel les dieux de l'Olympe prêtèrent serment avant le Titanomachie — la guerre entre Olympiens et Titans.")),
+ "Ari":("Aries",
+   ("The Ram","The golden ram whose fleece was the object of Jason's quest. The vernal equinox was once here, earning it the title 'First Point of Aries', though precession has since moved it into Pisces."),
+   ("Le Bélier","Le bélier à la toison d'or, objet de la quête de Jason. L'équinoxe de printemps y était autrefois situé (« premier point du Bélier »), mais la précession l'a depuis déplacé dans les Poissons.")),
+ "Aur":("Auriga",
+   ("The Charioteer","The inventor of the four-horse chariot. The brilliant yellow star Capella — the sixth brightest in the sky — represents the she-goat he carries on his shoulder."),
+   ("Le Cocher","L'inventeur du char à quatre chevaux. L'étoile jaune brillante Capella — sixième étoile du ciel par éclat — représente la chèvre qu'il porte sur l'épaule.")),
+ "Boo":("Boötes",
+   ("The Herdsman","The herdsman driving the Great Bear around the pole. Arcturus, its golden-orange alpha star, is the fourth brightest in the night sky and about 25 times larger than the Sun."),
+   ("Le Bouvier","Le bouvier conduisant la Grande Ourse autour du pôle. Arcturus, son étoile alpha orangée, est la quatrième plus brillante du ciel nocturne et environ 25 fois plus grande que le Soleil.")),
+ "Cae":("Caelum",
+   ("The Chisel","A small, faint constellation introduced by Lacaille representing an engraver's chisel. It is one of the least conspicuous constellations."),
+   ("Le Burin","Petite constellation peu remarquable introduite par Lacaille, représentant un burin de graveur.")),
+ "Cam":("Camelopardalis",
+   ("The Giraffe","A large but faint northern constellation representing a giraffe, introduced by Plancius in 1612. Despite its size it contains no bright stars."),
+   ("La Girafe","Grande constellation boréale peu lumineuse représentant une girafe, introduite par Plancius en 1612. Malgré sa taille, elle ne contient aucune étoile brillante.")),
+ "Cnc":("Cancer",
+   ("The Crab","In Greek myth, the crab sent by Hera to distract Heracles during his battle with the Hydra. The Beehive Cluster (M44) lies within its borders."),
+   ("Le Cancer","Le crabe envoyé par Héra pour distraire Héraclès lors de son combat contre l'Hydre. L'amas de l'Abeille (M44) s'y trouve.")),
+ "CVn":("Canes Venatici",
+   ("The Hunting Dogs","The two hunting dogs Asterion and Chara, held by Boötes. The Whirlpool Galaxy (M51), one of the most photographed galaxies, is found here."),
+   ("Les Chiens de chasse","Les deux chiens de chasse Astérion et Chara, tenus par le Bouvier. La galaxie du Tourbillon (M51), l'une des plus photographiées, s'y trouve.")),
+ "CMa":("Canis Major",
+   ("The Greater Dog","The larger of Orion's hunting dogs. Its alpha star Sirius is the brightest star in the entire night sky at magnitude −1.46."),
+   ("Le Grand Chien","Le plus grand des chiens d'Orion. Son étoile alpha Sirius est l'étoile la plus brillante du ciel nocturne, à la magnitude de −1,46.")),
+ "CMi":("Canis Minor",
+   ("The Lesser Dog","The smaller of Orion's dogs. Its principal star Procyon — 'before the dog' in Greek — rises just before Sirius."),
+   ("Le Petit Chien","Le plus petit des chiens d'Orion. Son étoile principale Procyon (« avant le chien ») se lève juste avant Sirius.")),
+ "Cap":("Capricornus",
+   ("The Sea Goat","An ancient zodiacal constellation shown as a goat with a fish's tail. In Greek myth it represents Pan transformed to escape Typhon."),
+   ("Le Capricorne","Antique constellation zodiacale représentée comme une chèvre à queue de poisson. Elle représente Pan transformé pour échapper au monstre Typhon.")),
+ "Car":("Carina",
+   ("The Keel","The keel of the ship Argo. Canopus, its alpha star, is the second brightest in the sky. The spectacular Eta Carinae Nebula, one of the most massive stellar nurseries known, lies here."),
+   ("La Carène","La quille du navire Argo. Canope, son étoile alpha, est la deuxième plus brillante du ciel. La spectaculaire nébuleuse d'Êta Carène, l'une des plus massives pépinières stellaires connues, s'y trouve.")),
+ "Cas":("Cassiopeia",
+   ("The Queen","Vain Queen of Ethiopia who boasted her beauty surpassed the sea-nymphs. She circles the North Pole and never sets from mid-northern latitudes, forming an unmistakable 'W' or 'M'."),
+   ("Cassiopée","La reine vaniteuse d'Éthiopie qui prétendit surpasser en beauté les Néréides. Elle tourne autour du pôle nord sans jamais se coucher depuis les latitudes tempérées, formant un « W » ou « M » reconnaissable.")),
+ "Cen":("Centaurus",
+   ("The Centaur","The wise centaur Chiron, tutor of many Greek heroes. It contains Alpha Centauri, the closest star system to the Sun at just 4.24 light-years, and the spectacular globular cluster Omega Centauri."),
+   ("Le Centaure","Le sage centaure Chiron, précepteur de nombreux héros. Il contient Alpha du Centaure, le système stellaire le plus proche du Soleil à 4,24 années-lumière, et le magnifique amas globulaire Oméga Centaure.")),
+ "Cep":("Cepheus",
+   ("The King","King of Ethiopia and husband of Cassiopeia. Delta Cephei, its famous variable star, gives its name to Cepheid variables — our most reliable cosmic distance rulers."),
+   ("Céphée","Roi d'Éthiopie et époux de Cassiopée. Delta Céphée, son étoile variable célèbre, donne son nom aux céphéides — les règles graduées de l'astronomie pour mesurer les distances cosmiques.")),
+ "Cet":("Cetus",
+   ("The Sea Monster","The sea monster sent to devour Andromeda. It is one of the largest constellations and contains Mira ('the Wonderful'), the prototype long-period variable star."),
+   ("La Baleine","Le monstre marin envoyé pour dévorer Andromède. C'est l'une des plus grandes constellations ; elle contient Mira (« la Merveilleuse »), prototype des étoiles variables à longue période.")),
+ "Cha":("Chamaeleon",
+   ("The Chameleon","A small, faint southern constellation representing a chameleon, introduced by Keyser and de Houtman. It lies close to the south celestial pole."),
+   ("Le Caméléon","Petite constellation australe peu lumineuse représentant un caméléon, introduite par Keyser et de Houtman. Elle se trouve près du pôle céleste sud.")),
+ "Cir":("Circinus",
+   ("The Compass","A tiny southern constellation introduced by Lacaille representing a drawing compass, just adjacent to the bright stars Alpha and Beta Centauri."),
+   ("Le Compas","Minuscule constellation australe introduite par Lacaille représentant un compas de dessinateur, juste à côté des étoiles brillantes Alpha et Bêta du Centaure.")),
+ "Col":("Columba",
+   ("The Dove","Often identified as the dove sent by Noah to search for land after the Flood, or the dove that guided the Argonauts."),
+   ("La Colombe","Souvent identifiée à la colombe envoyée par Noé pour chercher la terre après le Déluge, ou à celle qui guida les Argonautes entre les Symplégades.")),
+ "Com":("Coma Berenices",
+   ("Berenice's Hair","Named after Queen Berenice II of Egypt who sacrificed her golden hair. The Coma Cluster, one of the nearest galaxy clusters, lies within its borders."),
+   ("La Chevelure de Bérénice","Nommée d'après la reine Bérénice II d'Égypte qui sacrifia sa chevelure dorée. L'amas de la Chevelure, l'un des amas de galaxies les plus proches, s'y trouve.")),
+ "CrA":("Corona Australis",
+   ("The Southern Crown","The southern counterpart of Corona Borealis, known to the Greeks as a wreath — possibly the crown dropped by Sagittarius."),
+   ("La Couronne australe","Le pendant méridional de la Couronne boréale, connu des Grecs comme une guirlande — peut-être la couronne tombée du Sagittaire.")),
+ "CrB":("Corona Borealis",
+   ("The Northern Crown","The jewelled crown worn by Ariadne of Crete, placed in the sky by Dionysus. Its semicircular arc of stars is one of the most distinctive patterns in the northern sky."),
+   ("La Couronne boréale","La couronne ornée portée par Ariane de Crète, placée dans le ciel par Dionysos. Son arc de demi-cercle d'étoiles est l'un des motifs les plus caractéristiques du ciel boréal.")),
+ "Crv":("Corvus",
+   ("The Crow","The crow sent by Apollo to fetch water. It dawdled eating figs, then blamed a water snake. Apollo placed the crow, the cup (Crater), and the snake (Hydra) together in the sky."),
+   ("Le Corbeau","Le corbeau envoyé par Apollon chercher de l'eau, qui traîna à manger des figues puis accusa un serpent. Apollon plaça le corbeau, la coupe (Crater) et l'Hydre ensemble dans le ciel.")),
+ "Crt":("Crater",
+   ("The Cup","The cup of Apollo associated with the myth of Corvus the crow, appearing to sit on the back of Hydra."),
+   ("La Coupe","La coupe d'Apollon associée au mythe du corbeau, semblant posée sur le dos de l'Hydre.")),
+ "Cru":("Crux",
+   ("The Southern Cross","The smallest constellation yet one of the most recognizable. Its four bright stars form a kite visible year-round from the southern hemisphere, appearing on several national flags."),
+   ("La Croix du Sud","La plus petite constellation du ciel, mais l'une des plus reconnaissables. Ses quatre étoiles brillantes sont visibles toute l'année depuis l'hémisphère sud et figurent sur plusieurs drapeaux nationaux.")),
+ "Cyg":("Cygnus",
+   ("The Swan","Zeus in the form of a swan, or the swan form of Orpheus. The bright star Deneb forms one vertex of the Summer Triangle and lies about 2,600 light-years away."),
+   ("Le Cygne","Zeus transformé en cygne, ou peut-être le cygne d'Orphée. L'étoile brillante Deneb forme un sommet du Triangle d'été et se trouve à environ 2 600 années-lumière.")),
+ "Del":("Delphinus",
+   ("The Dolphin","The dolphin that persuaded the sea nymph Amphitrite to marry Poseidon. Small but compact and charming, nicknamed 'Job's Coffin' for its coffin-shaped asterism."),
+   ("Le Dauphin","Le dauphin qui persuada la nymphe Amphitrite d'épouser Poséidon. Petite mais compacte et charmante, surnommée « le Cercueil de Job » pour son astérisme en losange.")),
+ "Dor":("Dorado",
+   ("The Swordfish","Introduced by Keyser and de Houtman. It contains most of the Large Magellanic Cloud, the nearest irregular galaxy to the Milky Way, visible to the naked eye from southern latitudes."),
+   ("La Dorade","Introduite par Keyser et de Houtman. Elle contient la majeure partie du Grand Nuage de Magellan, la galaxie irrégulière la plus proche de la Voie lactée, visible à l'œil nu dans l'hémisphère sud.")),
+ "Dra":("Draco",
+   ("The Dragon","The dragon slain by Heracles guarding the golden apples of the Hesperides. It contains Thuban, which was the pole star around 2700 BCE when the Egyptian pyramids were built."),
+   ("Le Dragon","Le dragon tué par Héraclès qui gardait les pommes d'or des Hespérides. Il contient Thuban, qui était l'étoile polaire vers 2700 av. J.-C. lors de la construction des pyramides égyptiennes.")),
+ "Equ":("Equuleus",
+   ("The Little Horse","The second smallest constellation in the sky, representing a foal's head — sometimes said to be Celeris, the brother of Pegasus."),
+   ("Le Petit Cheval","La deuxième plus petite constellation du ciel, représentant la tête d'un poulain — parfois dit être Célèris, le frère de Pégase.")),
+ "Eri":("Eridanus",
+   ("The River","The great celestial river, often identified with the Po or Nile. It winds from near Rigel in Orion all the way to Achernar, the ninth brightest star, marking its southern end."),
+   ("L'Éridan","Le grand fleuve céleste, souvent identifié au Pô ou au Nil. Il serpente depuis Rigel d'Orion jusqu'à l'étoile brillante Achernar, la neuvième plus brillante du ciel.")),
+ "For":("Fornax",
+   ("The Furnace","Introduced by Lacaille to honour Lavoisier's chemical furnace. The famous Hubble Ultra Deep Field and the Fornax galaxy cluster lie within its borders."),
+   ("Le Fourneau","Introduit par Lacaille pour honorer le fourneau chimique de Lavoisier. L'Ultra Deep Field de Hubble et l'amas du Fourneau se trouvent dans ses frontières.")),
+ "Gem":("Gemini",
+   ("The Twins","The immortal twins Castor and Pollux, sons of Leda. When mortal Castor was killed, Pollux asked Zeus to share his immortality so they could remain together."),
+   ("Les Gémeaux","Les jumeaux immortels Castor et Pollux, fils de Léda. Lorsque le mortel Castor fut tué, Pollux demanda à Zeus de partager son immortalité pour qu'ils puissent rester ensemble.")),
+ "Gru":("Grus",
+   ("The Crane","A southern constellation introduced by Keyser and de Houtman, representing the tall wading crane they observed on their voyages to the East Indies."),
+   ("La Grue","Constellation australe introduite par Keyser et de Houtman, représentant la grande grue qu'ils observèrent lors de leurs voyages aux Indes orientales.")),
+ "Her":("Hercules",
+   ("The Hero","The greatest of Greek heroes, placed in the sky after his apotheosis. Though the fifth largest constellation, it contains no first-magnitude stars yet harbors the Great Globular Cluster (M13)."),
+   ("Hercule","Le plus grand des héros grecs, placé dans le ciel après son apothéose. Cinquième constellation par la taille, elle ne contient aucune étoile de première magnitude mais abrite le Grand Amas globulaire (M13).")),
+ "Hor":("Horologium",
+   ("The Clock","Introduced by Lacaille to honour the pendulum clock invented by Christiaan Huygens, which revolutionised timekeeping and celestial navigation."),
+   ("L'Horloge","Introduite par Lacaille pour honorer l'horloge à pendule inventée par Christiaan Huygens, qui révolutionna la mesure du temps et la navigation céleste.")),
+ "Hya":("Hydra",
+   ("The Water Snake","The largest constellation in the sky, stretching over 100 degrees. It represents the nine-headed Lernaean Hydra slain by Heracles — whenever one head was cut off, two grew back."),
+   ("L'Hydre","La plus grande constellation du ciel, s'étendant sur plus de 100 degrés. Elle représente l'Hydre de Lerne à neuf têtes tuée par Héraclès — chaque tête coupée en faisait repousser deux.")),
+ "Hyi":("Hydrus",
+   ("The Little Water Snake","A southern constellation introduced by Keyser and de Houtman, lying between the two Magellanic Clouds."),
+   ("L'Hydre mâle","Constellation australe introduite par Keyser et de Houtman, se trouvant entre les deux Nuages de Magellan.")),
+ "Ind":("Indus",
+   ("The Indian","A southern constellation introduced by Keyser and de Houtman. Its star Epsilon Indi, at 11.8 light-years, is one of the nearest stars with a confirmed planetary system."),
+   ("L'Indien","Constellation australe introduite par Keyser et de Houtman. Son étoile Epsilon de l'Indien, à 11,8 années-lumière, est l'une des étoiles voisines les plus proches connues pour avoir un système planétaire.")),
+ "Lac":("Lacerta",
+   ("The Lizard","A small northern constellation introduced by Hevelius in 1687. It contains BL Lacertae objects — extremely energetic active galactic nuclei."),
+   ("Le Lézard","Petite constellation boréale introduite par Hevelius en 1687. Elle contient des objets BL Lacertae — des noyaux actifs de galaxies parmi les plus énergétiques de l'univers.")),
+ "Leo":("Leo",
+   ("The Lion","The Nemean Lion slain by Heracles as his first labour. The bright star Regulus ('the little king') marks the lion's heart and lies almost exactly on the ecliptic."),
+   ("Le Lion","Le lion de Némée tué par Héraclès pour son premier travail. L'étoile brillante Régulus (« le petit roi ») marque le cœur du lion et se trouve presque exactement sur l'écliptique.")),
+ "LMi":("Leo Minor",
+   ("The Lesser Lion","A faint northern constellation introduced by Hevelius, tucked between Leo and Ursa Major. It was named in association with the great lion to its south."),
+   ("Le Petit Lion","Constellation boréale peu lumineuse introduite par Hevelius, coincée entre le Lion et la Grande Ourse, nommée en association avec le grand lion au sud.")),
+ "Lep":("Lepus",
+   ("The Hare","The hare being hunted by Orion and his dogs. It lies directly south of Orion, perpetually fleeing beneath the great hunter's feet."),
+   ("Le Lièvre","Le lièvre chassé par Orion et ses chiens. Il se trouve directement au sud d'Orion, perpétuellement en fuite sous les pieds du grand chasseur.")),
+ "Lib":("Libra",
+   ("The Scales","The only zodiacal constellation representing an inanimate object — the scales of justice held by the adjacent Virgo. Its two brightest stars are named Zubenelgenubi and Zubeneschamali."),
+   ("La Balance","La seule constellation zodiacale représentant un objet inanimé — les plateaux de la balance de la justice. Ses deux étoiles les plus brillantes s'appellent Zubenelgenubi et Zubeneschamali.")),
+ "Lup":("Lupus",
+   ("The Wolf","An ancient constellation originally seen as a wild animal on the tip of the lance held by Centaurus."),
+   ("Le Loup","Antique constellation représentée à l'origine comme un animal sauvage empalé sur la lance du Centaure voisin.")),
+ "Lyn":("Lynx",
+   ("The Lynx","Introduced by Hevelius, who named it so because only those with the eyes of a lynx could see its faint stars."),
+   ("Le Lynx","Introduit par Hevelius, qui le nomma ainsi parce que seuls ceux aux yeux de lynx pouvaient voir ses étoiles peu lumineuses.")),
+ "Lyr":("Lyra",
+   ("The Lyre","The lyre of Orpheus. Its star Vega — fifth brightest in the sky — forms one vertex of the Summer Triangle and will become our north pole star around 13,727 CE due to precession."),
+   ("La Lyre","La lyre d'Orphée. Son étoile Véga — cinquième plus brillante du ciel — forme un sommet du Triangle d'été et sera notre étoile polaire nord vers l'an 13 727 apr. J.-C.")),
+ "Men":("Mensa",
+   ("The Table Mountain","The only constellation named after a terrestrial geographic feature — Table Mountain near Cape Town, where Lacaille made his observations. Part of the Large Magellanic Cloud overlaps it."),
+   ("La Table","La seule constellation nommée d'après un relief terrestre — la Montagne de la Table près du Cap, où Lacaille observa. Une partie du Grand Nuage de Magellan la déborde.")),
+ "Mic":("Microscopium",
+   ("The Microscope","One of Lacaille's scientific instruments, representing the compound microscope invented by van Leeuwenhoek."),
+   ("Le Microscope","L'un des instruments scientifiques de Lacaille, représentant le microscope composé inventé par van Leeuwenhoek.")),
+ "Mon":("Monoceros",
+   ("The Unicorn","A faint constellation along the Milky Way, rich in nebulae: the Rosette Nebula, the Cone Nebula, and the Christmas Tree Cluster all reside here."),
+   ("La Licorne","Constellation peu lumineuse le long de la Voie lactée, remarquablement riche en nébuleuses : la Nébuleuse de la Rosette, la Nébuleuse du Cône et l'amas de l'Arbre de Noël s'y trouvent.")),
+ "Mus":("Musca",
+   ("The Fly","A small southern constellation introduced by Keyser and de Houtman, originally named Apis (the Bee) before being renamed by Lacaille."),
+   ("La Mouche","Petite constellation australe introduite par Keyser et de Houtman, portant originellement le nom Apis (l'Abeille) avant d'être rebaptisée par Lacaille.")),
+ "Nor":("Norma",
+   ("The Set Square","Introduced by Lacaille, representing the carpenter's set-square. It lies in a rich Milky Way region between Scorpius and Centaurus."),
+   ("L'Équerre","Introduite par Lacaille, représentant l'équerre de charpentier. Elle se trouve dans une riche région de la Voie lactée entre le Scorpion et le Centaure.")),
+ "Oct":("Octans",
+   ("The Octant","Introduced by Lacaille to honour the octant, precursor to the sextant. It contains the South Celestial Pole, though no bright star marks it — Sigma Octantis is only magnitude 5.5."),
+   ("L'Octant","Introduit par Lacaille pour honorer l'octant, prédécesseur du sextant. Il contient le pôle sud céleste, mais aucune étoile brillante ne le signale — Sigma de l'Octant est de magnitude 5,5 seulement.")),
+ "Oph":("Ophiuchus",
+   ("The Serpent Bearer","Often identified with Asclepius, god of medicine, holding the serpent Serpens. It straddles the ecliptic between Scorpius and Sagittarius and is sometimes called the 13th zodiacal constellation."),
+   ("Ophiuchus","Souvent identifié à Asclépios, dieu de la médecine, tenant le Serpent. Il chevauche l'écliptique entre le Scorpion et le Sagittaire et est parfois appelé officieusement la treizième constellation zodiacale.")),
+ "Ori":("Orion",
+   ("The Hunter","The great hunter of Greek mythology, and one of the most spectacular constellations. Betelgeuse marks his right shoulder; Rigel his left knee. The Orion Nebula (M42), a stellar nursery 1,344 light-years away, is visible to the naked eye."),
+   ("Orion","Le grand chasseur de la mythologie grecque. Bételgeuse marque son épaule droite ; Rigel son genou gauche. La Nébuleuse d'Orion (M42), pépinière stellaire distante de 1 344 années-lumière, est visible à l'œil nu.")),
+ "Pav":("Pavo",
+   ("The Peacock","Introduced by Keyser and de Houtman. Its brightest star, Peacock, is one of the fifty official navigational stars used in celestial navigation."),
+   ("Le Paon","Introduit par Keyser et de Houtman. Son étoile la plus brillante, Peacock, est l'une des cinquante étoiles navigatrices officielles utilisées en navigation astronomique.")),
+ "Peg":("Pegasus",
+   ("The Winged Horse","The immortal winged horse born from Medusa's blood. The Great Square of Pegasus dominates the autumn sky in the northern hemisphere."),
+   ("Pégase","Le cheval ailé immortel né du sang de Méduse. Le Grand Carré de Pégase domine le ciel d'automne dans l'hémisphère nord.")),
+ "Per":("Perseus",
+   ("The Hero","The hero who slew Medusa and rescued Andromeda. The variable star Algol ('the Demon Star') blinks every 2.87 days as a companion eclipses it."),
+   ("Persée","Le héros qui tua Méduse et sauva Andromède. L'étoile variable Algol (« l'étoile du Démon ») cligne tous les 2,87 jours lors de l'éclipse par son compagnon.")),
+ "Phe":("Phoenix",
+   ("The Phoenix","The mythical firebird of ancient Egypt that rose from its own ashes, introduced by Keyser and de Houtman. The Phoenix Cluster is the most massive galaxy cluster yet found."),
+   ("Le Phénix","L'oiseau mythique de feu de l'Égypte antique qui renaissait de ses cendres, introduit par Keyser et de Houtman. L'amas du Phénix est le plus massif jamais découvert.")),
+ "Pic":("Pictor",
+   ("The Easel","Introduced by Lacaille as the painter's easel. Beta Pictoris is surrounded by a famous edge-on debris disk and hosts at least two directly imaged exoplanets."),
+   ("Le Peintre","Introduit par Lacaille comme le chevalet du peintre. Bêta du Peintre est entourée d'un disque de débris vu par la tranche et abrite au moins deux exoplanètes détectées par imagerie directe.")),
+ "Psc":("Pisces",
+   ("The Fish","Two fish — Aphrodite and Eros transformed to escape Typhon — tied together by a cord. The vernal equinox currently resides here."),
+   ("Les Poissons","Deux poissons — Aphrodite et Éros transformés pour échapper à Typhon — liés par un cordon. L'équinoxe de printemps réside actuellement dans leurs frontières.")),
+ "PsA":("Piscis Austrinus",
+   ("The Southern Fish","The southern fish drinking the water poured by Aquarius. Its bright star Fomalhaut has a directly imaged planetary companion."),
+   ("Le Poisson austral","Le poisson méridional buvant l'eau versée par le Verseau. Son étoile brillante Fomalhaut possède une planète compagnon photographiée directement.")),
+ "Pup":("Puppis",
+   ("The Stern","The stern of the ship Argo, once part of the vast Argo Navis constellation, later divided by Lacaille into Carina, Puppis, and Vela."),
+   ("La Poupe","La poupe du navire Argo, autrefois partie de la vaste constellation Argo Navis, divisée par Lacaille en Carène, Poupe et Voiles.")),
+ "Pyx":("Pyxis",
+   ("The Mariner's Compass","Introduced by Lacaille, representing the ship's magnetic compass. It lies along the Milky Way."),
+   ("La Boussole","Introduite par Lacaille, représentant la boussole magnétique du navire. Elle se trouve le long de la Voie lactée.")),
+ "Ret":("Reticulum",
+   ("The Reticle","Introduced by Lacaille to honour the reticle eyepiece he used for precise measurements at his Cape of Good Hope observatory."),
+   ("Le Réticule","Introduit par Lacaille pour honorer le réticule de l'oculaire qu'il utilisa pour ses mesures de précision au Cap de Bonne-Espérance.")),
+ "Sge":("Sagitta",
+   ("The Arrow","One of the smallest constellations yet strikingly arrow-shaped. It may represent the arrow of Hercules, of Apollo, or of Cupid."),
+   ("La Flèche","L'une des plus petites constellations, mais en forme de flèche très reconnaissable. Elle peut représenter la flèche d'Héraclès, d'Apollon ou de Cupidon.")),
+ "Sgr":("Sagittarius",
+   ("The Archer","A centaur-archer aiming his bow at Scorpius. The centre of the Milky Way galaxy lies within its borders — the richest star-field visible on dark nights."),
+   ("Le Sagittaire","Un centaure archer pointant son arc vers le Scorpion. Le centre galactique de la Voie lactée se trouve dans ses frontières — le champ d'étoiles le plus riche visible les nuits claires.")),
+ "Sco":("Scorpius",
+   ("The Scorpion","The scorpion that stung Orion to death, placed opposite him so they never meet. Its heart is the red supergiant Antares — 'rival of Mars' — whose ruddy colour has long been compared to the red planet."),
+   ("Le Scorpion","Le scorpion qui piqua Orion à mort, placé à l'opposé pour qu'ils ne se rencontrent jamais. Son cœur est la supergéante rouge Antarès — « rivale de Mars » — dont la couleur rousse est comparée à celle de la planète rouge.")),
+ "Scl":("Sculptor",
+   ("The Sculptor","Introduced by Lacaille. The Sculptor Galaxy (NGC 253) is one of the brightest nearby edge-on spiral galaxies."),
+   ("Le Sculpteur","Introduit par Lacaille. La Galaxie du Sculpteur (NGC 253) est l'une des galaxies spirales vues par la tranche les plus brillantes et les plus proches.")),
+ "Sct":("Scutum",
+   ("The Shield","Introduced by Hevelius to honour the shield of King John III Sobieski of Poland. The Wild Duck Cluster (M11), one of the richest open clusters, lies within its borders."),
+   ("L'Écu de Sobieski","Introduit par Hevelius pour honorer le bouclier du roi Jean III Sobieski de Pologne. L'amas du Canard sauvage (M11), l'un des amas ouverts les plus riches du ciel, s'y trouve.")),
+ "Ser":("Serpens",
+   ("The Serpent","The only constellation divided into two separate parts: Serpens Caput (head) and Serpens Cauda (tail), held by Ophiuchus. The Eagle Nebula (M16), site of the 'Pillars of Creation', lies in its tail."),
+   ("Le Serpent","La seule constellation divisée en deux parties séparées : Serpens Caput (la tête) et Serpens Cauda (la queue), tenu par Ophiuchus. La Nébuleuse de l'Aigle (M16), siège des « Piliers de la Création », se trouve dans sa queue.")),
+ "Sex":("Sextans",
+   ("The Sextant","Introduced by Hevelius to represent the sextant he used for precise positional measurements. It is a faint equatorial constellation between Leo and Hydra."),
+   ("Le Sextant","Introduit par Hevelius pour représenter le sextant qu'il utilisa. C'est une constellation équatoriale peu lumineuse entre le Lion et l'Hydre.")),
+ "Tau":("Taurus",
+   ("The Bull","Zeus transformed into a bull to carry Europa. It contains the Pleiades and Hyades clusters, and the Crab Nebula (M1) — remnant of a supernova observed by Chinese astronomers in 1054 CE."),
+   ("Le Taureau","Zeus transformé en taureau pour emmener Europe. Il contient les Pléiades et les Hyades, et la Nébuleuse du Crabe (M1), résidu d'une supernova observée par des astronomes chinois en 1054 apr. J.-C.")),
+ "Tel":("Telescopium",
+   ("The Telescope","Introduced by Lacaille to honour the astronomical telescope. It is a small, faint southern constellation between Sagittarius and Ara."),
+   ("Le Télescope","Introduit par Lacaille pour honorer la lunette astronomique. C'est une petite constellation australe peu lumineuse entre le Sagittaire et l'Autel.")),
+ "Tri":("Triangulum",
+   ("The Triangle","One of the smallest constellations. The Triangulum Galaxy (M33), the third largest member of our Local Group, is one of the most distant objects visible to the naked eye."),
+   ("Le Triangle","L'une des plus petites constellations. La galaxie du Triangle (M33), troisième membre de notre Groupe Local, est l'un des objets les plus distants visibles à l'œil nu.")),
+ "TrA":("Triangulum Australe",
+   ("The Southern Triangle","Introduced by Keyser and de Houtman. Its three main stars form a more prominent equilateral triangle than its northern namesake."),
+   ("Le Triangle austral","Introduit par Keyser et de Houtman. Ses trois étoiles principales forment un triangle équilatéral plus proéminent que son homonyme boréal.")),
+ "Tuc":("Tucana",
+   ("The Toucan","Introduced by Keyser and de Houtman. It contains the Small Magellanic Cloud, a satellite galaxy of the Milky Way, and the spectacular globular cluster 47 Tucanae."),
+   ("Le Toucan","Introduit par Keyser et de Houtman. Il contient le Petit Nuage de Magellan, galaxie satellite de la Voie lactée, et le magnifique amas globulaire 47 Toucanae.")),
+ "UMa":("Ursa Major",
+   ("The Great Bear","One of the oldest and most universally recognised constellations. The seven brightest stars form the Big Dipper, whose two 'pointer' stars lead directly to Polaris. It is the third largest constellation."),
+   ("La Grande Ourse","L'une des constellations les plus anciennes et les plus universellement reconnues. Les sept étoiles les plus brillantes forment la Grande Casserole, dont deux « pointeurs » mènent directement à Polaris. C'est la troisième plus grande constellation.")),
+ "UMi":("Ursa Minor",
+   ("The Little Bear","The little bear whose tail tip is Polaris, the North Star. In Greek myth, the nymph Callisto and her son Arcas were transformed into bears and placed in the sky by Zeus."),
+   ("La Petite Ourse","La petite ourse dont la pointe de la queue est Polaris, l'Étoile polaire. Selon le mythe grec, la nymphe Callisto et son fils Arcas furent transformés en ourses et placés dans le ciel par Zeus.")),
+ "Vel":("Vela",
+   ("The Sails","The sails of the ship Argo. The Vela Supernova Remnant, at only ~800 light-years, is among the closest known remnants of a stellar explosion."),
+   ("Les Voiles","Les voiles du navire Argo. Le rémanent de supernova Vela, à seulement ~800 années-lumière, est l'un des plus proches rémanents d'explosion stellaire connus.")),
+ "Vir":("Virgo",
+   ("The Virgin","The second largest constellation. It contains the Virgo Cluster — the nearest large galaxy cluster to the Milky Way, with over 1,300 member galaxies."),
+   ("La Vierge","La deuxième plus grande constellation. Elle contient l'amas de la Vierge — l'amas de galaxies le plus proche de la Voie lactée, avec plus de 1 300 membres.")),
+ "Vol":("Volans",
+   ("The Flying Fish","Introduced by Keyser and de Houtman, representing the flying fish that leap above ocean waves. It lies close to the Large Magellanic Cloud."),
+   ("Le Poisson volant","Introduit par Keyser et de Houtman, représentant le poisson volant qui bondit au-dessus des vagues. Il se trouve près du Grand Nuage de Magellan.")),
+ "Vul":("Vulpecula",
+   ("The Little Fox","Introduced by Hevelius. The Dumbbell Nebula (M27), the first planetary nebula ever discovered (by Messier in 1764), lies within its borders."),
+   ("Le Petit Renard","Introduit par Hevelius. La Nébuleuse de l'Haltère (M27), la première nébuleuse planétaire jamais découverte (par Messier en 1764), s'y trouve.")),
+}
+
+SIMBAD_TAP = "https://simbad.cds.unistra.fr/simbad/sim-tap/sync"
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+def _lang():
+    try:
+        v = str(getattr(window, "SITE_LANG", "en") or "en").lower()
+        return "fr" if v.startswith("fr") else "en"
+    except Exception:
+        return "en"
+
+def _tr(en, fr=None, **kw):
+    t = fr if _lang() == "fr" and fr is not None else en
+    return t.format(**kw) if kw else t
+
+def _safe_sql(s):  return s.replace("'", "''")
+
+def _set_status(msg, level="ok", loading=False):
+    node = document.getElementById("status")
+    spin = '<span class="spinner"></span>' if loading else ""
+    node.innerHTML = f'<div class="msg {level}">{spin}<span>{msg}</span></div>'
+
+def _clear_status():
+    document.getElementById("status").innerHTML = ""
+
+def _set_result(html_str):
+    document.getElementById("result").innerHTML = html_str
+
+def _fmt_ra(ra_deg):
+    if ra_deg is None: return "—"
+    v = float(ra_deg) % 360.0
+    ts = v * 240.0
+    h, m = int(ts//3600), int((ts%3600)//60)
+    s = ts - 3600*h - 60*m
+    return f"{h:02d}h {m:02d}m {s:05.2f}s"
+
+def _fmt_dec(dec_deg):
+    if dec_deg is None: return "—"
+    v = float(dec_deg)
+    sgn = "+" if v >= 0 else "−"
+    ta = abs(v)*3600.0
+    d, m = int(ta//3600), int((ta%3600)//60)
+    s = ta - 3600*d - 60*m
+    return f"{sgn}{d:02d}° {m:02d}′ {s:04.1f}″"
+
+async def _tap_query(adql, timeout_s=20):
+    params = "request=doQuery&lang=adql&format=json&query=" + quote_plus(adql)
+    resp = await asyncio.wait_for(pyfetch(f"{SIMBAD_TAP}?{params}", method="GET"), timeout=timeout_s)
+    if not resp.ok: raise RuntimeError(f"SIMBAD HTTP {resp.status}")
+    return await asyncio.wait_for(resp.json(), timeout=timeout_s)
+
+async def _resolve_star(target):
+    adql = f"""SELECT TOP 1 b.main_id, b.ra, b.dec, b.otype_txt
+    FROM basic AS b JOIN ident AS i ON i.oidref = b.oid
+    WHERE i.id = '{_safe_sql(target)}'"""
+    payload = await _tap_query(adql)
+    rows = payload.get("data", [])
+    if not rows: return None
+    row = rows[0]
+    def g(i):
+        try:
+            v = row[i]
+            if v is None or str(v).strip().lower() in ("","none","null"): return None
+            return str(v).strip()
+        except Exception: return None
+    return {"main_id": g(0), "ra": g(1), "dec": g(2), "otype": g(3)}
+
+# ── coordinate parser ────────────────────────────────────────────────────────
+import re as _re
+
+def _sexa_nums(s):
+    return [float(x) for x in _re.findall(r'\d+\.?\d*', s)]
+
+def _sexa_ra(s):
+    n = _sexa_nums(s)
+    if len(n) < 2: return None
+    return (n[0] + n[1]/60 + (n[2]/3600 if len(n) > 2 else 0.0)) * 15.0
+
+def _sexa_dec(s):
+    s = s.strip()
+    sign = -1 if s.startswith('-') else 1
+    n = _sexa_nums(s)
+    if len(n) < 2: return None
+    return sign * (n[0] + n[1]/60 + (n[2]/3600 if len(n) > 2 else 0.0))
+
+def _try_parse_coords(text):
+    """
+    Try to interpret the input as RA/Dec coordinates.
+    Returns (ra_deg, dec_deg) or None.
+    Supported: "101.287 -16.716"  |  "06:44:59 -16:42:58"  |  "06h44m59s -16d42m58s"
+    """
+    text = text.strip()
+    # decimal degrees: two floats
+    m = _re.fullmatch(r'([+-]?\d+\.?\d*)\s*[,\s]\s*([+-]?\d+\.?\d*)', text)
+    if m:
+        try:
+            ra, dec = float(m[1]), float(m[2])
+            if 0.0 <= ra < 360.0 and -90.0 <= dec <= 90.0:
+                return ra, dec
+        except Exception: pass
+    # sexagesimal: require at least one colon or hms letter
+    if not _re.search(r'[:hd]', text, _re.I):
+        return None
+    # two whitespace-separated tokens (e.g. "06:44:59 -16:42:58")
+    parts = text.split()
+    if len(parts) == 2:
+        ra  = _sexa_ra(parts[0])
+        dec = _sexa_dec(parts[1])
+        if ra is not None and dec is not None and 0.0 <= ra < 360.0 and -90.0 <= dec <= 90.0:
+            return ra, dec
+    # compact without spaces: split at the Dec sign (e.g. "06h44m59s-16d42m58s")
+    m = _re.match(r'^(.+?)\s*([+-]\d.*)', text)
+    if m:
+        ra  = _sexa_ra(m[1])
+        dec = _sexa_dec(m[2])
+        if ra is not None and dec is not None and 0.0 <= ra < 360.0 and -90.0 <= dec <= 90.0:
+            return ra, dec
+    return None
+
+# ── last result cache for rerender ────────────────────────────────────────────
+_last_result = None
+
+def _render_result(result):
+    ra, dec    = result.get("ra"), result.get("dec")
+    main_id    = result.get("main_id")  # None in coord-mode
+    coord_mode = result.get("coord_mode", False)
+    otype      = result.get("otype") or ""
+    const_abbr = get_constellation(float(ra), float(dec))
+    if const_abbr is None:
+        _set_status(_tr("Constellation could not be determined.", "Constellation indéterminable."), "error")
+        return
+    lang = _lang()
+    if const_abbr in _CDATA:
+        const_name, en_data, fr_data = _CDATA[const_abbr]
+        meaning, desc = (fr_data[0], fr_data[1]) if lang == "fr" else (en_data[0], en_data[1])
+    else:
+        const_name = const_abbr; meaning = ""; desc = ""
+    meaning_html = f'<div class="const-meaning">{meaning}</div>' if meaning else ""
+    otype_label  = _tr("Object type", "Type d'objet")
+    otype_html   = f'<div class="info-chip"><span class="label">{otype_label}</span><span class="value">{otype}</span></div>' if otype and not coord_mode else ""
+    ra_label     = _tr("Right Ascension", "Ascension droite")
+    dec_label    = _tr("Declination", "Déclinaison")
+    if coord_mode:
+        header_lbl = _tr("Coordinates", "Coordonnées")
+        id_html    = f'<div class="star-id">{_fmt_ra(ra)}&thinsp; {_fmt_dec(dec)}</div>'
+        simbad_url = (f"https://simbad.cds.unistra.fr/simbad/sim-coo?"
+                     f"Coord={quote_plus(str(round(float(ra),6)))}+{quote_plus(str(round(float(dec),6)))}"
+                     f"&Radius=2&Radius.unit=arcmin")
+        simbad_txt = _tr("Search nearby on SIMBAD ↗", "Rechercher aux alentours sur SIMBAD ↗")
+    else:
+        header_lbl = _tr("You searched for", "Vous avez cherché")
+        id_html    = f'<div class="star-id">{main_id}</div>' if main_id else ""
+        simbad_url = f"https://simbad.cds.unistra.fr/simbad/sim-id?Ident={quote_plus(main_id or '')}"
+        simbad_txt = _tr(f"View {main_id} on SIMBAD ↗", f"Voir {main_id} sur SIMBAD ↗")
+    _clear_status()
+    _set_result(f"""
+<div class="result-card">
+  <div class="star-label">{header_lbl}</div>
+  {id_html}
+  <div class="const-abbr">{const_abbr}</div>
+  <div class="const-name">{const_name}</div>
+  {meaning_html}
+  <div class="divider"></div>
+  <div class="info-chips">
+    <div class="info-chip"><span class="label">{ra_label}</span><span class="value">{_fmt_ra(ra)}</span></div>
+    <div class="info-chip"><span class="label">{dec_label}</span><span class="value">{_fmt_dec(dec)}</span></div>
+    {otype_html}
+  </div>
+  <div class="const-desc">{desc}</div>
+  <a class="simbad-link" href="{simbad_url}" target="_blank" rel="noopener">{simbad_txt}</a>
+</div>""")
+
+async def _do_lookup(event=None):
+    global _last_result
+    inp = document.getElementById("star_name")
+    btn = document.getElementById("find_btn")
+    target = (inp.value or "").strip()
+    if not target:
+        _set_status(_tr("Please enter a star name or coordinates.",
+                       "Veuillez entrer un nom d'étoile ou des coordonnées."), "warn")
+        return
+    # ── coordinate input? (no network needed) ──
+    coords = _try_parse_coords(target)
+    if coords is not None:
+        _last_result = {"ra": str(coords[0]), "dec": str(coords[1]),
+                        "main_id": None, "otype": "", "coord_mode": True}
+        _set_result("")
+        _render_result(_last_result)
+        btn.disabled = False; inp.disabled = False
+        return
+    # ── name lookup via SIMBAD ──
+    _set_status(_tr(f'Searching SIMBAD for “{target}”…', f'Recherche de « {target} » dans SIMBAD…'), "ok", loading=True)
+    _set_result("")
+    _last_result = None
+    btn.disabled = True; inp.disabled = True
+    try:
+        result = await _resolve_star(target)
+        if result is None:
+            _set_status(_tr(
+                f'No match found for “{target}” in SIMBAD. Try a standard name like “Sirius”, “HIP 11767”, or “Betelgeuse”.',
+                f'« {target} » introuvable dans SIMBAD. Essayez un nom courant comme « Sirius », « HIP 11767 » ou « Bételgeuse ».'),
+                "error"); return
+        if result.get("ra") is None or result.get("dec") is None:
+            _set_status(_tr(f'Coordinates not found for “{result.get("main_id","?")}”.',
+                           f'Coordonnées introuvables pour « {result.get("main_id","?")} ».'), "error"); return
+        _last_result = result
+        _render_result(result)
+    except asyncio.TimeoutError:
+        _set_status(_tr("Request timed out — SIMBAD may be slow. Please try again.",
+                       "La requête a expiré — SIMBAD est peut-être surchargé. Réessayez."), "error")
+    except Exception as exc:
+        _set_status(_tr(f"Error: {exc}", f"Erreur : {exc}"), "error")
+    finally:
+        btn.disabled = False; inp.disabled = False
+
+def _do_rerender(event=None):
+    if _last_result is not None:
+        _render_result(_last_result)
+
+def _js_lookup(event=None):   asyncio.ensure_future(_do_lookup())
+def _js_rerender(event=None): _do_rerender()
+
+_lookup_proxy  = create_proxy(_js_lookup)
+_rerender_proxy = create_proxy(_js_rerender)
+
+if not hasattr(window, "CONSTFINDER_BOOT") or window.CONSTFINDER_BOOT is None:
+    window.CONSTFINDER_BOOT = js.Object.new()
+window.CONSTFINDER_BOOT.doLookup  = _lookup_proxy
+window.CONSTFINDER_BOOT.rerender  = _rerender_proxy
+window.CONSTFINDER_BOOT.ready     = True
+if hasattr(window, "flushPendingLookup"):
+    window.flushPendingLookup()
+  </script>
+</body>
+</html>
