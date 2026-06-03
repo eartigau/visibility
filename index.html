@@ -1930,24 +1930,20 @@ _TELLURIC_STARS = {
 }
 
 def _compute_telluric_recs(doy, lat_deg, lon_deg, utc_offset, sunset_utc, sunrise_utc, dst_active=False):
-    """Compute telluric star recommendations for half-hour intervals between sunset and sunrise."""
-    if sunset_utc is None or sunrise_utc is None:
-        return []
+    """Compute telluric star recommendations for half-hour intervals from 18h to 08h local time."""
+    # Generate intervals from 18h local to 08h local (next day)
+    # Convert local times to UTC
+    start_local = 18.0  # 6 PM
+    end_local = 8.0     # 8 AM next day (14 hours later)
     
-    # Convert to continuous time range
-    sunset = sunset_utc
-    sunrise = sunrise_utc if sunrise_utc > sunset else sunrise_utc + 24
+    start_utc = (start_local - utc_offset) % 24
     
-    # Generate half-hour intervals from sunset to sunrise (inclusive)
+    # Generate half-hour intervals from 18h to 08h local (14 hours = 28 half-hours + start = 29 points)
     intervals = []
-    t = sunset  # Start at actual sunset
-    while t <= sunrise:
+    t = start_utc
+    for _ in range(29):  # 14 hours * 2 + 1
         intervals.append(t)
-        t += 0.5
-    
-    # Also add sunrise itself if not already in list
-    if intervals and abs(intervals[-1] - sunrise) > 0.01:
-        intervals.append(sunrise)
+        t = (t + 0.5) % 24
     
     recommendations = []
     dec_r_lat = math.radians(lat_deg)
@@ -1962,11 +1958,15 @@ def _compute_telluric_recs(doy, lat_deg, lon_deg, utc_offset, sunset_utc, sunris
     
     for utc_hour in intervals:
         # Compute sun altitude at this time
-        jd_sun = 2451544.5 + n + (utc_hour % 24) / 24.0
+        jd_sun = 2451544.5 + n + utc_hour / 24.0
         lst_sun = math.radians((280.46061837 + 360.98564736629 * (jd_sun - 2451545.0)) % 360) + math.radians(lon_deg)
         sun_alt = math.degrees(math.asin(max(-1, min(1, 
             math.sin(s_dec) * math.sin(dec_r_lat) + 
             math.cos(s_dec) * math.cos(dec_r_lat) * math.cos(lst_sun - s_ra)))))
+        
+        # Only include if sun is below horizon
+        if sun_alt >= 0:
+            continue
         
         # Compute airmass for all telluric stars at this time
         stars_am = []
