@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Constellation Finder</title>
+  <title>Visibility Planner</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://pyscript.net/releases/2025.3.1/core.css" />
   <script type="module" src="https://pyscript.net/releases/2025.3.1/core.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
   <style>
     :root {
       --bg-deep:  #020817;
@@ -85,6 +86,49 @@
     .footer a:hover { text-decoration:underline; }
     .coord-hint { margin:-0.3rem 0 1.1rem; color:var(--ink-dim); font-size:.82rem; line-height:1.55; }
     .coord-hint code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.82rem; background:rgba(100,160,255,.1); border:1px solid rgba(100,160,255,.2); border-radius:4px; padding:.05em .35em; color:var(--accent-2); white-space:nowrap; }
+
+
+    /* ── info bar (replaces two-column grid) ── */
+    .info-bar { display:flex; flex-wrap:wrap; gap:.5rem .8rem; padding:.9rem 1.1rem; background:rgba(8,16,40,.75); border:1px solid rgba(120,170,255,.15); border-radius:14px; animation:fadeIn .4s ease; align-items:center; }
+    .ib-item { display:flex; flex-direction:column; gap:.12rem; min-width:0; }
+    .ib-key { font-size:.66rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); white-space:nowrap; }
+    .ib-val { font-family:"Exo 2",monospace; font-size:.88rem; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ib-sep { width:1px; height:2rem; background:rgba(120,160,255,.15); align-self:center; flex-shrink:0; }
+    .ib-const { color:var(--accent-2); }
+    /* ── visibility summary card ── */
+    .vis-card { background:rgba(8,16,40,.72); border:1px solid rgba(120,170,255,.13); border-radius:12px; padding:.75rem 1rem; margin-top:.6rem; animation:fadeIn .4s ease; font-size:.82rem; color:var(--ink-dim); line-height:1.55; }
+    /* ── DST checkbox ── */
+    .dst-row { display:flex; align-items:center; gap:.45rem; }
+    .dst-row input[type=checkbox] { width:14px; height:14px; accent-color:var(--accent); cursor:pointer; }
+    .dst-row label { font-size:.72rem; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-dim); cursor:pointer; white-space:nowrap; }
+    /* ── observatory panel ── */
+    .obs-panel { margin-top:1rem; }
+    .obs-header { color:var(--ink-dim); font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; margin-bottom:.65rem; }
+    .obs-btns { display:flex; flex-wrap:wrap; gap:.45rem; margin-bottom:.8rem; }
+    .obs-btn { background:rgba(40,60,120,.4); border:1px solid rgba(100,160,255,.25); border-radius:8px; padding:.3rem .75rem; color:var(--accent-2); font-size:.85rem; font-family:"Space Grotesk",sans-serif; cursor:pointer; transition:background .15s,border-color .15s; white-space:nowrap; }
+    .obs-btn:hover { background:rgba(60,90,180,.55); border-color:rgba(100,160,255,.5); }
+    .obs-btn.obs-active { background:linear-gradient(135deg,#2a60d0,#5a9aff); color:#fff; border-color:transparent; }
+    .obs-inputs { display:flex; flex-wrap:wrap; gap:.7rem; align-items:flex-end; }
+    .obs-field { display:flex; flex-direction:column; gap:.22rem; }
+    .obs-field label { font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); }
+    .obs-field input[type=number] { background:rgba(10,20,50,.8); border:1px solid rgba(100,140,255,.25); border-radius:8px; padding:.38rem .55rem; font-size:.88rem; color:var(--ink); width:115px; font-family:"Space Grotesk",sans-serif; outline:none; -moz-appearance:textfield; }
+    .obs-field input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
+    .obs-field input:focus { border-color:rgba(100,160,255,.55); }
+    .obs-name { font-size:.82rem; color:var(--gold); font-style:italic; padding-bottom:.2rem; }
+    /* ── result grid ── */
+    .result-grid { display:grid; grid-template-columns:5fr 7fr; gap:1rem; }
+    .result-card-sm { background:linear-gradient(135deg,rgba(10,20,60,.72),rgba(20,5,50,.72)); border:1px solid rgba(120,170,255,.18); border-radius:16px; padding:1.2rem 1rem; text-align:center; animation:fadeIn .4s ease; display:flex; flex-direction:column; justify-content:center; }
+    .info-card { background:rgba(8,16,40,.78); border:1px solid rgba(120,170,255,.15); border-radius:16px; padding:1.1rem 1.2rem; animation:fadeIn .4s ease; }
+    .info-row { display:flex; justify-content:space-between; align-items:center; padding:.3rem 0; border-bottom:1px solid rgba(255,255,255,.055); font-size:.86rem; gap:.5rem; }
+    .info-row:last-child { border-bottom:none; }
+    .info-key { color:var(--ink-dim); font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap; }
+    .info-val { color:var(--ink); font-family:"Exo 2",monospace; font-size:.85rem; text-align:right; word-break:break-all; }
+    /* ── plot area ── */
+    #plot_area { margin-top:1rem; display:none; }
+    .plot-card { background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:1.1rem 1.2rem; backdrop-filter:blur(14px); margin-bottom:1rem; }
+    .plot-card:last-child { margin-bottom:0; }
+    .plot-title { font-family:"Exo 2",sans-serif; font-size:.78rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:.4rem; }
+    @media (max-width:600px) { .result-grid{grid-template-columns:1fr;} }
     @media (max-width:520px) { h1{font-size:1.9rem;} .search-row{flex-direction:column;} .const-name{font-size:2.2rem;} }
   </style>
 </head>
@@ -104,7 +148,7 @@
 
     <div class="site-header">
       <div class="site-icon">✦</div>
-      <h1 id="t_title">Constellation Finder</h1>
+      <h1 id="t_title">Visibility Planner</h1>
       <p class="tagline" id="t_tagline">Enter a star name — discover its place among the constellations</p>
     </div>
 
@@ -133,6 +177,51 @@
       <div id="result"></div>
     </div>
 
+    <div class="obs-panel card">
+      <div class="obs-header" id="t_obs_label">Observatory</div>
+      <div class="obs-btns">
+        <button class="obs-btn obs-active" data-obs="OMM"  type="button">OMM</button>
+        <button class="obs-btn" data-obs="MK"   type="button">Mauna Kea</button>
+        <button class="obs-btn" data-obs="GemS" type="button">Cerro Pachón</button>
+        <button class="obs-btn" data-obs="VLT"  type="button">Paranal</button>
+        <button class="obs-btn" data-obs="LC"   type="button">Las Campanas</button>
+        <button class="obs-btn" data-obs="LS"   type="button">La Silla</button>
+        <button class="obs-btn" data-obs="LP"   type="button">La Palma</button>
+        <button class="obs-btn" data-obs="LBT"  type="button">LBT</button>
+        <button class="obs-btn" data-obs="KP"   type="button">Kitt Peak</button>
+        <button class="obs-btn" data-obs="SALT" type="button">Sutherland</button>
+        <button class="obs-btn" data-obs="SSO"  type="button">Siding Spring</button>
+      </div>
+      <div class="obs-inputs">
+        <div class="obs-field">
+          <label for="obs_lat" id="t_lat_lbl">Latitude (°N)</label>
+          <input id="obs_lat" type="number" step="0.001" value="45.455" min="-90" max="90" />
+        </div>
+        <div class="obs-field">
+          <label for="obs_lon" id="t_lon_lbl">Longitude (°E)</label>
+          <input id="obs_lon" type="number" step="0.001" value="-71.153" min="-180" max="180" />
+        </div>
+        <div class="obs-field">
+          <span class="obs-name" id="obs_name_lbl">Mont-Mégantic (1111 m)</span>
+        </div>
+        <div class="dst-row">
+          <input id="dst_check" type="checkbox" />
+          <label for="dst_check" id="t_dst_lbl">Daylight saving (DST +1h)</label>
+        </div>
+      </div>
+    </div>
+
+    <div id="plot_area">
+      <div class="plot-card">
+        <div class="plot-title" id="t_am_title">Airmass — UTC time × day of year</div>
+        <div id="airmass_plot"></div>
+      </div>
+      <div class="plot-card">
+        <div class="plot-title" id="t_bary_title">Barycentric velocity (Earth orbital component only)</div>
+        <div id="bary_plot"></div>
+      </div>
+    </div>
+
     <div class="footer" id="t_footer">
       Star data via <a href="https://simbad.cds.unistra.fr/" target="_blank">SIMBAD</a>
       (CDS, Strasbourg) &nbsp;·&nbsp; Constellation boundaries: IAU / Roman (1987) / Delporte (1930)
@@ -144,22 +233,42 @@
     /* ── i18n strings ── */
     const STRINGS = {
       en: {
-        title:       "Constellation Finder",
-        tagline:     "Enter a star name — or coordinates — to discover its constellation",
+        title:       "Visibility Planner",
+        tagline:     "Plan stellar observations — airmass, barycentric velocity, twilight",
         placeholder: "Star name, or: 101.287 −16.716 / 06:44:59 −16:42:58",
-        btn:         "Find Constellation",
+        btn:         "Fetch object coordinates",
         try:         "Try:",
         footer:      'Star data via <a href="https://simbad.cds.unistra.fr/" target="_blank">SIMBAD</a> (CDS, Strasbourg) &nbsp;·&nbsp; Constellation boundaries: IAU / Roman (1987) / Delporte (1930)',
         coordHint:   'Or enter coordinates: <code>101.287 −16.716</code> (decimal °) &nbsp;·&nbsp; <code>06:44:59 −16:42:58</code> (sexagesimal) &nbsp;·&nbsp; <code>06h44m59s −16d42m58s</code> (h m s / d m s)',
+        dstLbl:      'Daylight saving (DST +1h)',
+        localTLabel: 'Local time',
+        baryTitle:   'Expected radial velocity — BERV + v₀ (km/s)',
+        noVsys:      'v₀ not in SIMBAD — showing BERV only',
+        obsLabel:    'Observatory',
+        latLbl:      'Latitude (°N)',
+        lonLbl:      'Longitude (°E)',
+        amTitle:     'Airmass — UTC time × day of year',
+        baryTitle:   'Barycentric velocity (Earth orbital component only)',
+        computing:   'Computing airmass & barycentric corrections…',
       },
       fr: {
-        title:       "Chercheur de Constellations",
-        tagline:     "Entrez un nom d'étoile — ou des coordonnées — pour trouver sa constellation",
+        title:       "Planificateur d'observabilité",
+        tagline:     "Planifiez vos observations — masse d'air, vitesse barycentrique, crépuscule",
         placeholder: "Nom d'étoile, ou : 101.287 −16.716 / 06:44:59 −16:42:58",
-        btn:         "Trouver la constellation",
+        btn:         "Récupérer coordonnées",
         try:         "Essayez :",
         footer:      'Données via <a href="https://simbad.cds.unistra.fr/" target="_blank">SIMBAD</a> (CDS, Strasbourg) &nbsp;·&nbsp; Frontières IAU / Roman (1987) / Delporte (1930)',
         coordHint:   'Ou entrez des coordonnées : <code>101.287 −16.716</code> (degrés décimaux) &nbsp;·&nbsp; <code>06:44:59 −16:42:58</code> (sexagésimal) &nbsp;·&nbsp; <code>06h44m59s −16d42m58s</code> (h m s / d m s)',
+        dstLbl:      'Heure d\'été (DST +1h)',
+        localTLabel: 'Heure locale',
+        baryTitle:   'Vitesse radiale attendue — BERV + v₀ (km/s)',
+        noVsys:      'v₀ absente de SIMBAD — BERV seule affichée',
+        obsLabel:    'Observatoire',
+        latLbl:      'Latitude (°N)',
+        lonLbl:      'Longitude (°E)',
+        amTitle:     'Masse d\'air — heure UTC × jour de l\'année',
+        baryTitle:   'Vitesse barycentrique (composante orbitale uniquement)',
+        computing:   'Calcul de la masse d\'air et des corrections barycentriques…',
       },
     };
 
@@ -185,6 +294,12 @@
       document.getElementById("t_try").textContent      = s.try;
       document.getElementById("t_footer").innerHTML     = s.footer;
       document.getElementById("t_coord_hint").innerHTML = s.coordHint;
+      document.getElementById("t_obs_label").textContent  = s.obsLabel;
+      document.getElementById("t_lat_lbl").textContent    = s.latLbl;
+      document.getElementById("t_lon_lbl").textContent    = s.lonLbl;
+      document.getElementById("t_am_title").textContent    = s.amTitle;
+      document.getElementById("t_bary_title").textContent  = s.baryTitle;
+      document.getElementById("t_dst_lbl").textContent     = s.dstLbl;
       document.getElementById("btn_en").classList.toggle("active", LANG === "en");
       document.getElementById("btn_fr").classList.toggle("active", LANG === "fr");
       window.SITE_LANG = LANG;
@@ -253,6 +368,525 @@
       );
       applyLang();
     });
+    /* ── Observatory presets ── */
+    const OBS = {
+      OMM:  { label: 'Mont-Mégantic (1111 m)',          lat:  45.455, lon:  -71.153, utc: -5, dst: true  },
+      MK:   { label: 'Mauna Kea — Keck/Gemini N (4205 m)', lat:  19.821, lon: -155.468, utc:-10, dst: false },
+      GemS: { label: 'Cerro Pachón — Gemini S (2722 m)',lat: -30.241, lon:  -70.737, utc: -4, dst: true  },
+      VLT:  { label: 'Paranal — VLT (2635 m)',          lat: -24.628, lon:  -70.404, utc: -4, dst: true  },
+      LC:   { label: 'Las Campanas — Magellan (2380 m)',lat: -29.010, lon:  -70.692, utc: -4, dst: true  },
+      LS:   { label: 'La Silla — ESO 3.6m (2400 m)',    lat: -29.258, lon:  -70.735, utc: -4, dst: true  },
+      LP:   { label: 'La Palma — GTC/WHT (2396 m)',     lat:  28.762, lon:  -17.890, utc:  0, dst: true  },
+      LBT:  { label: 'Mt Graham — LBT (3221 m)',        lat:  32.702, lon: -109.889, utc: -7, dst: false },
+      KP:   { label: 'Kitt Peak — Mayall 4m (2096 m)',  lat:  31.963, lon: -111.600, utc: -7, dst: false },
+      SALT: { label: 'Sutherland — SALT (1798 m)',      lat: -32.376, lon:   20.811, utc:  2, dst: false },
+      SSO:  { label: 'Siding Spring — AAT (1149 m)',    lat: -31.277, lon:  149.071, utc: 10, dst: true  },
+    };
+    window.OBS_UTC_OFFSET = OBS.OMM.utc;  // default
+
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('.obs-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          const key = btn.getAttribute('data-obs');
+          const o = OBS[key];
+          if (!o) return;
+          document.getElementById('obs_lat').value = o.lat;
+          document.getElementById('obs_lon').value = o.lon;
+          document.getElementById('obs_name_lbl').textContent = o.label;
+          document.querySelectorAll('.obs-btn').forEach(b => b.classList.remove('obs-active'));
+          btn.classList.add('obs-active');
+          window.OBS_LAT = o.lat;
+          window.OBS_LON = o.lon;
+          window.OBS_UTC_OFFSET = o.utc;
+          document.getElementById("dst_check").checked = false;
+          window.DST_OFFSET = 0;
+          /* re-render plots if a result is loaded */
+          if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.rerenderPlots) {
+            window.CONSTFINDER_BOOT.rerenderPlots();
+          }
+        });
+      });
+      /* Sync input changes → OBS_LAT/OBS_LON and clear active button */
+      ['obs_lat', 'obs_lon'].forEach(function (id) {
+        document.getElementById(id).addEventListener('change', function () {
+          window.OBS_LAT = parseFloat(document.getElementById('obs_lat').value);
+          window.OBS_LON = parseFloat(document.getElementById('obs_lon').value);
+          window.OBS_UTC_OFFSET = Math.round(window.OBS_LON / 15);
+          document.querySelectorAll('.obs-btn').forEach(b => b.classList.remove('obs-active'));
+          document.getElementById('obs_name_lbl').textContent = '';
+          if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.rerenderPlots) {
+            window.CONSTFINDER_BOOT.rerenderPlots();
+          }
+        });
+      });
+      document.getElementById('dst_check').addEventListener('change', function() {
+        window.DST_OFFSET = this.checked ? 1 : 0;
+        if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.rerenderPlots) window.CONSTFINDER_BOOT.rerenderPlots();
+      });
+      /* Default */
+      window.OBS_LAT = OBS.OMM.lat;
+      window.OBS_LON = OBS.OMM.lon;
+      window.DST_OFFSET = 0;
+    });
+
+    /* ── Month tick helpers ── */
+    const MONTH_DAYS = [1,32,60,91,121,152,182,213,244,274,305,335];
+    const MONTH_EN   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const MONTH_FR   = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    function monthNames() { return LANG === 'fr' ? MONTH_FR : MONTH_EN; }
+    function curDoy() {
+      const now = new Date(); const s = new Date(now.getFullYear(),0,1);
+      return Math.ceil((now - s) / 86400000);
+    }
+
+    /* ── Airmass plot ── */
+    window.renderAirmassPlot = function (am) {
+      // zmin=1, zmax=2.5 — only airmass cells are coloured; NaN cells are transparent
+      const colorscale = [
+        [0.000, '#1a50c8'],  // am=1.0: excellent (deep blue)
+        [0.333, '#00b860'],  // am=1.5: good (green)
+        [0.667, '#f0c000'],  // am=2.0: moderate (yellow)
+        [1.000, '#d02020'],  // am=2.5: limit (red)
+      ];
+      const mn = monthNames();
+      const cd = curDoy();
+      const utcOff = (window.OBS_UTC_OFFSET || 0) + (window.DST_OFFSET || 0);
+
+      // ── centre y-axis on local midnight ─────────────────────────────────────
+      const localMidnightUtc = ((-utcOff) % 24 + 24) % 24;
+      const remapped = am.hours.map((h, i) => ({
+        y: h < localMidnightUtc ? h + 24 : h,
+        row: am.z[i],
+      }));
+      remapped.sort((a, b) => a.y - b.y);
+      
+      // Extend coverage: duplicate first hours at end to cover full 3pm-9am range
+      const extendedRemapped = [...remapped];
+      const hoursNeeded = 54;  // Extend by 9 hours (54 entries at 10-min intervals)
+      for (let i = 0; i < hoursNeeded && i < remapped.length; i++) {
+        extendedRemapped.push({
+          y: remapped[i].y + 24,
+          row: remapped[i].row
+        });
+      }
+      
+      const newHours = extendedRemapped.map(r => r.y);
+      const newZ     = extendedRemapped.map(r => r.row);
+      const yMin = localMidnightUtc;
+      const yMax = localMidnightUtc + 24;
+
+      function remapT(t) {
+        return (t === null || t === undefined) ? null : (t < localMidnightUtc ? t + 24 : t);
+      }
+
+      // ── Set axis range: 3pm to 9am local time (non-summer) ──────────────────
+      // 3pm local = 15:00 local → in UTC: 15 - utcOffset (but we need base offset without DST)
+      const baseUtcOff = window.OBS_UTC_OFFSET || 0;  // Base offset without DST
+      const local15 = ((15 - baseUtcOff) % 24 + 24) % 24;  // 3pm local in UTC
+      const local09 = ((9 - baseUtcOff) % 24 + 24) % 24;   // 9am local in UTC (next day)
+      let obsYMin = remapT(local15);
+      let obsYMax = remapT(local09) + 24;  // Next day's morning, so always add 24
+
+      // ── axis ticks every 1 h across the extended range ──────────────────────
+      const yTicks = [];
+      for (let t = Math.ceil(obsYMin); t <= obsYMax; t += 1) yTicks.push(t);
+      function fmtUTC(u) {
+        const h = ((Math.round(u) % 24) + 24) % 24;
+        return String(h).padStart(2,'0') + ':00';
+      }
+      function fmtLocal(u) {
+        const lh = ((Math.round(u + utcOff) % 24) + 24) % 24;
+        return String(lh).padStart(2,'0') + ':00';
+      }
+      const dstActive = window.DST_OFFSET > 0;
+      const localSuffix = dstActive ? (LANG === 'fr' ? ' (été)' : ' (summer)') : '';
+      const localTitle = ((STRINGS[LANG] || STRINGS.en).localTLabel || 'Local') + localSuffix;
+
+      const traces = [
+        // Heatmap -- only airmass 1-2.5 coloured; null cells are transparent
+        // Plotted against yaxis2 (UTC on right) since data is in UTC hours
+        { z: newZ, x: am.doys, y: newHours, yaxis: 'y2', type: 'heatmap',
+          colorscale, zmin: 1, zmax: 2.5, showscale: true,
+          colorbar: { title: { text: 'Airmass', font:{color:'#7090b8',size:10} },
+            tickvals:[1,1.5,2,2.5], ticktext:['1.0','1.5','2.0','2.5'],
+            tickfont:{color:'#7090b8',size:9}, thickness:12, len:0.55, y:0.5, x:1.12 },
+          hoverongaps:false,
+          hovertemplate:'DOY %{x}, %{customdata:.2f}h UTC -- airmass %{z:.2f}<extra></extra>',
+          customdata: newHours.map(h => {
+            const utcHour = ((h % 24) + 24) % 24;
+            return am.doys.map(() => utcHour);
+          }) },
+        // Today marker (spans both axes)
+        { x:[cd,cd], y:[obsYMin,obsYMax], yaxis:'y2', mode:'lines', type:'scatter',
+          line:{color:'rgba(255,255,255,0.45)',dash:'dot',width:1.5},
+          showlegend:false, hoverinfo:'skip' },
+        // Dummy trace so Plotly renders yaxis (local time) on the left
+        { x:[null], y:[null], yaxis:'y', type:'scatter', mode:'markers',
+          marker:{size:0.001,opacity:0}, showlegend:false, hoverinfo:'skip' },
+      ];
+
+      // Twilight curves as layout.shapes so they always render on top of the heatmap
+      const twil = am.twil || {};
+      
+      // Extend DOYs and twilight times to wrap around year (both ends)
+      const wrapDays = 90;  // Extend 3 months on each side for continuous curves
+      const extDoys = [];
+      const extTwil = {};
+      
+      // Prepend last wrapDays from end of year (as negative DOYs)
+      for (let i = am.doys.length - wrapDays; i < am.doys.length; i++) {
+        if (i >= 0) extDoys.push(am.doys[i] - 365);
+      }
+      // Add full year
+      extDoys.push(...am.doys);
+      // Append first wrapDays from start of year (as >365 DOYs)
+      for (let i = 0; i < wrapDays && i < am.doys.length; i++) {
+        extDoys.push(am.doys[i] + 365);
+      }
+      
+      // Do the same for all twilight arrays
+      for (const key of ['set0', 'rise0', 'set12', 'rise12', 'set18', 'rise18']) {
+        const arr = twil[key] || [];
+        extTwil[key] = [];
+        // Prepend last wrapDays
+        for (let i = arr.length - wrapDays; i < arr.length; i++) {
+          if (i >= 0) extTwil[key].push(arr[i]);
+        }
+        // Add full year
+        extTwil[key].push(...arr);
+        // Append first wrapDays
+        for (let i = 0; i < wrapDays && i < arr.length; i++) {
+          extTwil[key].push(arr[i]);
+        }
+      }
+      
+      function twilSegments(doys, times, color, width, isRise = false) {
+        const shapes = [];
+        let seg = [];
+        for (let i = 0; i <= doys.length; i++) {
+          const raw = i < doys.length ? times[i] : null;
+          let t   = remapT(raw);  // Apply coordinate remapping!
+          // For rise times (morning), add 24 to place them in next morning after night
+          if (isRise && t !== null && raw !== null) {
+            // If time is in early morning (before local 15:00), it's tomorrow morning
+            if (raw < 15) t += 24;
+          }
+          const ok  = t !== null && (seg.length === 0 || Math.abs(t - seg[seg.length-1][1]) < 30);
+          if (ok) { seg.push([doys[i], t]); }
+          else {
+            for (let j = 0; j + 1 < seg.length; j++)
+              shapes.push({type:'line', xref:'x', yref:'y2',  // y2 = UTC axis on right
+                x0:seg[j][0], y0:seg[j][1], x1:seg[j+1][0], y1:seg[j+1][1],
+                line:{color, width}});
+            seg = (t !== null) ? [[doys[i], t]] : [];
+          }
+        }
+        return shapes;
+      }
+      // ── Create daytime hatching (sun > 0°) ──────────────────────────────────
+      const daytimeShapes = [];
+      for (let i = 0; i + 1 < extDoys.length; i++) {
+        const set0_i = extTwil.set0[i];
+        const rise0_i = extTwil.rise0[i];
+        if (set0_i !== null && rise0_i !== null) {
+          const setT = remapT(set0_i);
+          const riseT = remapT(rise0_i) + (rise0_i < localMidnightUtc + 15 ? 24 : 0);
+          // Daytime before sunset
+          if (setT !== null && setT > obsYMin) {
+            daytimeShapes.push({
+              type: 'rect',
+              xref: 'x', yref: 'y2',
+              x0: extDoys[i], x1: extDoys[i+1],
+              y0: obsYMin, y1: setT,
+              fillcolor: 'rgba(160,180,200,0.25)',
+              line: { width: 0 },
+              layer: 'above'
+            });
+          }
+          // Daytime after sunrise
+          if (riseT !== null && riseT < obsYMax) {
+            daytimeShapes.push({
+              type: 'rect',
+              xref: 'x', yref: 'y2',
+              x0: extDoys[i], x1: extDoys[i+1],
+              y0: riseT, y1: obsYMax,
+              fillcolor: 'rgba(160,180,200,0.25)',
+              line: { width: 0 },
+              layer: 'above'
+            });
+          }
+        }
+      }
+
+      const shapes = [
+        ...daytimeShapes,
+        ...twilSegments(extDoys, extTwil.set0  ||[], 'rgba(255,255,255,0.80)', 1.6, false),
+        ...twilSegments(extDoys, extTwil.rise0 ||[], 'rgba(255,255,255,0.80)', 1.6, true),
+        ...twilSegments(extDoys, extTwil.set12 ||[], 'rgba(120,195,255,0.85)', 1.6, false),
+        ...twilSegments(extDoys, extTwil.rise12||[], 'rgba(120,195,255,0.85)', 1.6, true),
+        ...twilSegments(extDoys, extTwil.set18 ||[], 'rgba( 80,120,220,0.65)', 1.2, false),
+        ...twilSegments(extDoys, extTwil.rise18||[], 'rgba( 80,120,220,0.65)', 1.2, true),
+        // Current day marker
+        { type:'line', xref:'x', yref:'y2',
+          x0:curDoy(), y0:obsYMin, x1:curDoy(), y1:obsYMax,
+          line:{color:'rgba(255,220,100,0.45)',dash:'dot',width:2} },
+      ];
+
+      const layout = {
+        paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+        font:{color:'#7090b8',family:'Space Grotesk,sans-serif',size:10},
+        margin:{t:10,r:80,b:40,l:80}, height:380,
+        xaxis:{ tickvals:MONTH_DAYS, ticktext:mn, gridcolor:'rgba(255,255,255,0.10)',
+                showline:false, range:[1,365] },
+        yaxis:{ title:localTitle, gridcolor:'rgba(255,255,255,0.06)',
+                tickvals:yTicks, ticktext:yTicks.map(fmtLocal),
+                range:[obsYMin, obsYMax], showline:false,
+                tickfont:{color:'rgba(160,190,255,0.85)',size:9},
+                titlefont:{color:'rgba(160,190,255,0.85)',size:10} },
+        yaxis2:{ title:'UTC (h)', overlaying:'y', side:'right', anchor:'x',
+                 tickvals:yTicks, ticktext:yTicks.map(fmtUTC),
+                 range:[obsYMin, obsYMax], showgrid:false, zeroline:false },
+        shapes,
+        showlegend:false,
+        annotations:[
+          {x:0.01, y:0.98, xref:'paper', yref:'paper',
+           text:'— 0° &nbsp; -- -12° &nbsp; · -18°',
+           showarrow:false, font:{color:'rgba(200,220,255,0.70)',size:8},
+           align:'left', xanchor:'left', yanchor:'top'},
+        ],
+      };
+      Plotly.newPlot('airmass_plot', traces, layout, {displayModeBar:false, responsive:true})
+        .then(() => {
+          // Add click handler to select a day
+          const plotDiv = document.getElementById('airmass_plot');
+          plotDiv.on('plotly_click', (data) => {
+            if (data.points && data.points.length > 0) {
+              const doy = Math.round(data.points[0].x);
+              window.renderAirmassDay(window._airmassData, doy);
+            }
+          });
+        });
+        });
+    };
+
+    /* ── Single-day airmass plot ── */
+    window.renderAirmassDay = function (am, selectedDoy) {
+      if (!selectedDoy) selectedDoy = curDoy();
+      
+      // Store target info for recomputation if needed
+      if (!window._currentTargetInfo) window._currentTargetInfo = {};
+      window._currentTargetInfo.selectedDoy = selectedDoy;
+      
+      const isDST = document.getElementById('dst_check').checked;
+      const utcOff = parseFloat(localStorage.getItem('utcOff') || '-5') + (isDST ? 1 : 0);
+      
+      // Date formatting
+      const year = new Date().getFullYear();
+      const date = new Date(year, 0, selectedDoy);
+      const months = LANG === 'fr' 
+        ? ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'aoû', 'sep', 'oct', 'nov', 'déc']
+        : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const dateStr = `${date.getDate()} ${months[date.getMonth()]}`;
+      
+      // Find the data for this DOY
+      const doyIdx = am.doys.indexOf(selectedDoy);
+      if (doyIdx === -1) return;
+      
+      // Extract airmass values for this day (transpose back)
+      const hours = am.hours;
+      const airmassValues = am.z.map(row => row[doyIdx]);
+      
+      // Get twilight times for this day
+      const twil = am.twil || {};
+      const set0 = twil.set0 ? twil.set0[doyIdx] : null;
+      const rise0 = twil.rise0 ? twil.rise0[doyIdx] : null;
+      const set12 = twil.set12 ? twil.set12[doyIdx] : null;
+      const rise12 = twil.rise12 ? twil.rise12[doyIdx] : null;
+      const set18 = twil.set18 ? twil.set18[doyIdx] : null;
+      const rise18 = twil.rise18 ? twil.rise18[doyIdx] : null;
+      
+      // Convert UTC hours to local time
+      const localHours = hours.map(h => {
+        let local = h + utcOff;
+        while (local < 0) local += 24;
+        while (local >= 24) local -= 24;
+        return local;
+      });
+      
+      // Format time as HH:MM
+      const fmtTime = (h) => {
+        const hh = Math.floor(h);
+        const mm = Math.floor((h - hh) * 60);
+        return `${hh.toString().padStart(2,'0')}:${mm.toString().padStart(2,'0')}`;
+      };
+      
+      // Create hover text with date and local time
+      const hoverText = hours.map((h, i) => {
+        const localH = localHours[i];
+        const am_val = airmassValues[i];
+        if (am_val === null) return '';
+        return `${dateStr}<br>Local: ${fmtTime(localH)}<br>UTC: ${fmtTime(h)}<br>Airmass: ${am_val.toFixed(2)}`;
+      });
+      
+      const traces = [
+        {
+          x: localHours,
+          y: airmassValues,
+          mode: 'lines',
+          type: 'scatter',
+          line: { color: '#4a9eff', width: 2.5 },
+          hovertext: hoverText,
+          hoverinfo: 'text',
+          showlegend: false
+        }
+      ];
+      
+      // Add twilight markers
+      const shapes = [];
+      const annotations = [];
+      
+      // Sunset/sunrise (0°)
+      if (set0 !== null) {
+        const localSet0 = ((set0 + utcOff) % 24 + 24) % 24;
+        shapes.push({
+          type: 'line', x0: localSet0, x1: localSet0, y0: 1.0, y1: 2.5,
+          line: { color: 'rgba(255,255,255,0.6)', width: 1.5, dash: 'dot' }
+        });
+      }
+      if (rise0 !== null) {
+        let localRise0 = ((rise0 + utcOff) % 24 + 24) % 24;
+        if (localRise0 < 12) localRise0 += 24;  // Next morning
+        shapes.push({
+          type: 'line', x0: localRise0, x1: localRise0, y0: 1.0, y1: 2.5,
+          line: { color: 'rgba(255,255,255,0.6)', width: 1.5, dash: 'dot' }
+        });
+      }
+      
+      // Nautical twilight (-12°)
+      if (set12 !== null) {
+        const localSet12 = ((set12 + utcOff) % 24 + 24) % 24;
+        shapes.push({
+          type: 'line', x0: localSet12, x1: localSet12, y0: 1.0, y1: 2.5,
+          line: { color: 'rgba(120,195,255,0.7)', width: 1.5, dash: 'dash' }
+        });
+      }
+      if (rise12 !== null) {
+        let localRise12 = ((rise12 + utcOff) % 24 + 24) % 24;
+        if (localRise12 < 12) localRise12 += 24;
+        shapes.push({
+          type: 'line', x0: localRise12, x1: localRise12, y0: 1.0, y1: 2.5,
+          line: { color: 'rgba(120,195,255,0.7)', width: 1.5, dash: 'dash' }
+        });
+      }
+      
+      // Astronomical twilight (-18°)
+      if (set18 !== null) {
+        const localSet18 = ((set18 + utcOff) % 24 + 24) % 24;
+        shapes.push({
+          type: 'line', x0: localSet18, x1: localSet18, y0: 1.0, y1: 2.5,
+          line: { color: 'rgba(80,120,220,0.5)', width: 1.2 }
+        });
+      }
+      if (rise18 !== null) {
+        let localRise18 = ((rise18 + utcOff) % 24 + 24) % 24;
+        if (localRise18 < 12) localRise18 += 24;
+        shapes.push({
+          type: 'line', x0: localRise18, x1: localRise18, y0: 1.0, y1: 2.5,
+          line: { color: 'rgba(80,120,220,0.5)', width: 1.2 }
+        });
+      }
+      
+      const layout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(6,14,36,0.45)',
+        font: { color: '#7090b8', family: 'Space Grotesk,sans-serif', size: 10 },
+        margin: { t: 10, r: 20, b: 40, l: 60 },
+        height: 240,
+        xaxis: {
+          title: LANG === 'fr' ? 'Heure locale' : 'Local time',
+          gridcolor: 'rgba(255,255,255,0.08)',
+          showline: false,
+          range: [15, 33]  // 3pm to 9am next day
+        },
+        yaxis: {
+          title: 'Airmass',
+          gridcolor: 'rgba(255,255,255,0.08)',
+          showline: false,
+          range: [1.0, 2.5],
+          autorange: false
+        },
+        shapes,
+        showlegend: false,
+        annotations: [
+          {
+            x: 0.01, y: 0.98, xref: 'paper', yref: 'paper',
+            text: `<b>${dateStr}</b>`,
+            showarrow: false,
+            font: { color: 'rgba(200,220,255,0.85)', size: 11 },
+            align: 'left', xanchor: 'left', yanchor: 'top'
+          }
+        ]
+      };
+      
+      Plotly.newPlot('airmass_day_plot', traces, layout, { displayModeBar: false, responsive: true });
+    };
+
+    /* ── Barycentric velocity plot ── */
+    window.renderBaryPlot = function (bary) {
+      const mn = monthNames(); const cd = curDoy();
+      const vel = bary.vels; const doy = bary.doys;
+      const vsys = (bary.vsys !== null && bary.vsys !== undefined) ? bary.vsys : null;
+      const vMin = Math.min(...vel) - 3; const vMax = Math.max(...vel) + 3;
+      const rangeMin = Math.min(vMin, -5); const rangeMax = Math.max(vMax, 5);
+      const traces = [
+        /* telluric zone fill */
+        { x:[...doy,...doy.slice().reverse()], y:[...doy.map(()=>4),...doy.map(()=>-4)],
+          fill:'toself', type:'scatter', fillcolor:'rgba(255,180,0,0.10)',
+          line:{color:'transparent'}, showlegend:false, hoverinfo:'skip' },
+        /* ±4 km/s lines */
+        { x:[1,365], y:[4,4],   mode:'lines', type:'scatter', line:{color:'rgba(255,180,0,0.55)',dash:'dash',width:1}, showlegend:false, hoverinfo:'skip' },
+        { x:[1,365], y:[-4,-4], mode:'lines', type:'scatter', line:{color:'rgba(255,180,0,0.55)',dash:'dash',width:1}, showlegend:false, hoverinfo:'skip' },
+        /* zero line */
+        { x:[1,365], y:[0,0], mode:'lines', type:'scatter', line:{color:'rgba(255,255,255,0.18)',width:1}, showlegend:false, hoverinfo:'skip' },
+        /* v_total curve */
+        { x:doy, y:vel, mode:'lines', type:'scatter',
+          line:{color:'#4a9eff',width:2.5},
+          hovertemplate:'DOY %{x}: <b>%{y:.2f} km/s</b><extra></extra>' },
+        /* today */
+        { x:[cd,cd], y:[rangeMin,rangeMax], mode:'lines', type:'scatter',
+          line:{color:'rgba(255,255,255,0.4)',dash:'dot',width:1.5},
+          showlegend:false, hoverinfo:'skip' },
+      ];
+      const vsysStr = vsys !== null ? `v₀ = ${vsys.toFixed(1)} km/s` : ((STRINGS[LANG]||STRINGS.en).noVsys||'BERV only');
+      const yTitle = (STRINGS[LANG]||STRINGS.en).baryTitle || 'BERV + v₀ (km/s)';
+      const layout = {
+        paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(6,14,36,0.45)',
+        font:{color:'#7090b8',family:'Space Grotesk,sans-serif',size:10},
+        margin:{t:10,r:20,b:40,l:65}, height:240,
+        xaxis:{ tickvals:MONTH_DAYS, ticktext:mn, gridcolor:'rgba(255,255,255,0.08)',
+                showline:false, range:[1,365] },
+        yaxis:{ title:yTitle, gridcolor:'rgba(255,255,255,0.08)',
+                showline:false, zeroline:false, range:[rangeMin,rangeMax] },
+        showlegend:false,
+        annotations:[
+          { x:183, y:2.7, text:'±4 km/s telluric zone',
+            showarrow:false, font:{color:'rgba(255,180,0,0.65)',size:9}, xanchor:'center' },
+          { x:0.99, y:0.97, xref:'paper', yref:'paper', text:vsysStr,
+            showarrow:false, font:{color:'rgba(160,200,255,0.65)',size:9},
+            align:'right', xanchor:'right', yanchor:'top' },
+        ],
+      };
+      Plotly.newPlot('bary_plot', traces, layout, {displayModeBar:false, responsive:true});
+    };
+
+    /* Called from Python after computation */
+    window.showPlots = function (jsonStr) {
+      const d = JSON.parse(jsonStr);
+      document.getElementById('plot_area').style.display = 'block';
+      window.renderAirmassPlot(d.airmass);
+      window.renderBaryPlot(d.bary);
+    };
+
   })();
   </script>
 
@@ -703,7 +1337,7 @@ async def _tap_query(adql, timeout_s=20):
     return await asyncio.wait_for(resp.json(), timeout=timeout_s)
 
 async def _resolve_star(target):
-    adql = f"""SELECT TOP 1 b.main_id, b.ra, b.dec, b.otype_txt
+    adql = f"""SELECT TOP 1 b.main_id, b.ra, b.dec, b.otype_txt, b.rvz_radvel
     FROM basic AS b JOIN ident AS i ON i.oidref = b.oid
     WHERE i.id = '{_safe_sql(target)}'"""
     payload = await _tap_query(adql)
@@ -716,7 +1350,7 @@ async def _resolve_star(target):
             if v is None or str(v).strip().lower() in ("","none","null"): return None
             return str(v).strip()
         except Exception: return None
-    return {"main_id": g(0), "ra": g(1), "dec": g(2), "otype": g(3)}
+    return {"main_id": g(0), "ra": g(1), "dec": g(2), "otype": g(3), "v_sys": g(4)}
 
 # ── coordinate parser ────────────────────────────────────────────────────────
 import re as _re
@@ -790,38 +1424,78 @@ def _render_result(result):
         const_name = const_abbr; meaning = ""; desc = ""
     meaning_html = f'<div class="const-meaning">{meaning}</div>' if meaning else ""
     otype_label  = _tr("Object type", "Type d'objet")
-    otype_html   = f'<div class="info-chip"><span class="label">{otype_label}</span><span class="value">{otype}</span></div>' if otype and not coord_mode else ""
+    otype_html_row = (f'<div class="info-row"><span class="info-key">{otype_label}</span>'
+                   f'<span class="info-val">{otype}</span></div>') if otype and not coord_mode else ""
+    otype_ib = (f'<div class="ib-item"><span class="ib-key">{otype_label}</span>'
+               f'<span class="ib-val">{otype}</span></div>') if otype and not coord_mode else ""
+    # Ecliptic coordinates for info card
+    try:
+        _ecl_l, _ecl_b = _ecliptic_lon_lat(float(ra), float(dec))
+        ecl_str = f"{_ecl_l:.2f}° / {_ecl_b:.2f}°"
+    except Exception:
+        ecl_str = "—"
     ra_label     = _tr("Right Ascension", "Ascension droite")
     dec_label    = _tr("Declination", "Déclinaison")
     if coord_mode:
-        header_lbl = _tr("Coordinates", "Coordonnées")
-        id_html    = f'<div class="star-id">{_fmt_ra(ra)}&thinsp; {_fmt_dec(dec)}</div>'
+        header_lbl    = _tr("Coordinates", "Coordonnées")
+        id_html       = f'<div class="star-id">{_fmt_ra(ra)}&thinsp; {_fmt_dec(dec)}</div>'
+        id_html_plain = f'{_fmt_ra(ra)}  {_fmt_dec(dec)}'
         simbad_url = (f"https://simbad.cds.unistra.fr/simbad/sim-coo?"
                      f"Coord={quote_plus(str(round(float(ra),6)))}+{quote_plus(str(round(float(dec),6)))}"
                      f"&Radius=2&Radius.unit=arcmin")
         simbad_txt = _tr("Search nearby on SIMBAD ↗", "Rechercher aux alentours sur SIMBAD ↗")
     else:
-        header_lbl = _tr("You searched for", "Vous avez cherché")
-        id_html    = f'<div class="star-id">{main_id}</div>' if main_id else ""
-        simbad_url = f"https://simbad.cds.unistra.fr/simbad/sim-id?Ident={quote_plus(main_id or '')}"
-        simbad_txt = _tr(f"View {main_id} on SIMBAD ↗", f"Voir {main_id} sur SIMBAD ↗")
+        header_lbl    = _tr("Star", "Étoile")
+        id_html       = f'<div class="star-id">{main_id}</div>' if main_id else ""
+        id_html_plain = main_id or "?"
+        simbad_url    = f"https://simbad.cds.unistra.fr/simbad/sim-id?Ident={quote_plus(main_id or '')}"
+        simbad_txt    = _tr("View on SIMBAD ↗", "Voir sur SIMBAD ↗")
     _clear_status()
+    # Visibility note (ecliptic coords + max BERV)
+    v_sys_raw = result.get("v_sys")
+    v_sys_str = f"{float(v_sys_raw):+.1f} km/s" if v_sys_raw is not None else "—"
+    try:
+        _ecl_l_r, _ecl_b_r = _ecliptic_lon_lat(float(ra), float(dec))
+        _berv_max = round(29.786 * abs(math.cos(math.radians(_ecl_b_r))), 1)
+        vis_note = _tr(
+            f"Ecliptic lon/lat: {_ecl_l_r:.1f}° / {_ecl_b_r:.1f}°.  "
+            f"Peak orbital BERV: ±{_berv_max} km/s.",
+            f"Lon/lat écliptique : {_ecl_l_r:.1f}° / {_ecl_b_r:.1f}°.  "
+            f"BERV orbital max : ±{_berv_max} km/s.")
+    except Exception:
+        vis_note = ""
     _set_result(f"""
-<div class="result-card">
-  <div class="star-label">{header_lbl}</div>
-  {id_html}
-  <div class="const-abbr">{const_abbr}</div>
-  <div class="const-name">{const_name}</div>
-  {meaning_html}
-  <div class="divider"></div>
-  <div class="info-chips">
-    <div class="info-chip"><span class="label">{ra_label}</span><span class="value">{_fmt_ra(ra)}</span></div>
-    <div class="info-chip"><span class="label">{dec_label}</span><span class="value">{_fmt_dec(dec)}</span></div>
-    {otype_html}
+<div class="info-bar">
+  <div class="ib-item">
+    <span class="ib-key">{header_lbl}</span>
+    <span class="ib-val" style="color:var(--gold);font-size:1rem">{id_html_plain}</span>
   </div>
-  <div class="const-desc">{desc}</div>
-  <a class="simbad-link" href="{simbad_url}" target="_blank" rel="noopener">{simbad_txt}</a>
-</div>""")
+  <div class="ib-sep"></div>
+  <div class="ib-item">
+    <span class="ib-key">{ra_label}</span>
+    <span class="ib-val">{_fmt_ra(ra)}</span>
+  </div>
+  <div class="ib-item">
+    <span class="ib-key">{dec_label}</span>
+    <span class="ib-val">{_fmt_dec(dec)}</span>
+  </div>
+  {otype_ib}
+  <div class="ib-sep"></div>
+  <div class="ib-item">
+    <span class="ib-key">v₀</span>
+    <span class="ib-val" style="color:var(--accent-2)">{v_sys_str}</span>
+  </div>
+  <div class="ib-sep"></div>
+  <div class="ib-item">
+    <span class="ib-key" style="font-size:.62rem;color:var(--ink-dim)">{const_abbr} {const_name}{(" — "+meaning) if meaning else ""}</span>
+    <span class="ib-val ib-const" style="font-size:.75rem;color:var(--ink-dim)">{desc[:120]}…</span>
+  </div>
+  <div style="margin-left:auto;align-self:center">
+    <a class="simbad-link" href="{simbad_url}" target="_blank" rel="noopener">{simbad_txt}</a>
+  </div>
+</div>
+<div class="vis-card">{vis_note}</div>
+""")
 
 async def _do_lookup(event=None):
     global _last_result
@@ -839,6 +1513,9 @@ async def _do_lookup(event=None):
                         "main_id": None, "otype": "", "coord_mode": True}
         _set_result("")
         _render_result(_last_result)
+        lat = float(getattr(window, "OBS_LAT", 45.455))
+        lon = float(getattr(window, "OBS_LON", -71.153))
+        asyncio.ensure_future(_render_observatory_plots(_last_result, lat, lon))
         btn.disabled = False; inp.disabled = False
         return
     # ── name lookup via SIMBAD ──
@@ -858,6 +1535,9 @@ async def _do_lookup(event=None):
                            f'Coordonnées introuvables pour « {result.get("main_id","?")} ».'), "error"); return
         _last_result = result
         _render_result(result)
+        lat = float(getattr(window, "OBS_LAT", 45.455))
+        lon = float(getattr(window, "OBS_LON", -71.153))
+        asyncio.ensure_future(_render_observatory_plots(result, lat, lon))
     except asyncio.TimeoutError:
         _set_status(_tr("Request timed out — SIMBAD may be slow. Please try again.",
                        "La requête a expiré — SIMBAD est peut-être surchargé. Réessayez."), "error")
@@ -870,6 +1550,211 @@ def _do_rerender(event=None):
     if _last_result is not None:
         _render_result(_last_result)
 
+# ── Solar / barycentric / airmass computations ─────────────────────────────────
+import json as _json
+
+def _sun_lon_deg(doy):
+    """Approximate ecliptic longitude of Sun (°) for day of year (1–365)."""
+    n = doy - 1.0
+    g = math.radians((357.528 + 0.9856003 * n) % 360)
+    return (280.46 + 0.9856474 * n + 1.915 * math.sin(g) + 0.020 * math.sin(2*g)) % 360
+
+def _ecliptic_lon_lat(ra_deg, dec_deg):
+    """Return ecliptic (lon°, lat°) from equatorial (J2000)."""
+    eps = math.radians(23.4393)
+    ra, dec = math.radians(ra_deg), math.radians(dec_deg)
+    sin_b = math.sin(dec)*math.cos(eps) - math.cos(dec)*math.sin(eps)*math.sin(ra)
+    b = math.asin(max(-1.0, min(1.0, sin_b)))
+    l = math.atan2(math.sin(ra)*math.cos(eps) + math.tan(dec)*math.sin(eps), math.cos(ra))
+    return math.degrees(l) % 360, math.degrees(b)
+
+def _bary_velocity(ra_deg, dec_deg, v_sys=None):
+    """Barycentric + systemic radial velocity (km/s). Returns (doys, vels)."""
+    ecl_l, ecl_b = _ecliptic_lon_lat(ra_deg, dec_deg)
+    l_r   = math.radians(ecl_l)
+    cos_b = math.cos(math.radians(ecl_b))
+    v0    = float(v_sys) if v_sys is not None else 0.0
+    doys  = list(range(1, 366))
+    vels  = [round(29.786 * cos_b * math.sin(l_r - math.radians(_sun_lon_deg(d))) + v0, 3)
+             for d in doys]
+    return doys, vels
+
+def _airmass_grid(ra_deg, dec_deg, lat_deg, lon_deg):
+    """
+    Compute 2-D airmass grid.  z encoding:
+      -3 = daytime (sun > 0°)
+      -2 = civil twilight (-12° < sun ≤ 0°)
+      -1 = nautical twilight (-18° < sun ≤ -12°)
+       0 = astro night, target below horizon
+     1–5 = airmass (capped at 5)
+    """
+    try:
+        import numpy as np
+        return _am_numpy(ra_deg, dec_deg, lat_deg, lon_deg, np)
+    except Exception:
+        return _am_pure(ra_deg, dec_deg, lat_deg, lon_deg)
+
+def _am_numpy(ra_deg, dec_deg, lat_deg, lon_deg, np):
+    dec_r = math.radians(dec_deg)
+    lat_r = math.radians(lat_deg)
+    # every 1 day × every 5 min  →  365 × 288 grid (2× finer in each axis)
+    doys  = list(range(1, 366, 1))
+    hours = [h/12 for h in range(288)]   # 0, 0.083, … 23.917
+    D = np.array(doys,  float)
+    H = np.array(hours, float)
+    JD   = 2451544.5 + (D[:,None] - 1) + H[None,:] / 24.0
+    GMST = np.radians((280.46061837 + 360.98564736629 * (JD - 2451545.0)) % 360)
+    LST  = GMST + math.radians(lon_deg)
+    # Target altitude
+    HA_t  = LST - math.radians(ra_deg)
+    s_t   = math.sin(dec_r)*math.sin(lat_r) + math.cos(dec_r)*math.cos(lat_r)*np.cos(HA_t)
+    alt_t = np.degrees(np.arcsin(np.clip(s_t, -1, 1)))
+    # Sun altitude
+    n     = D - 1
+    g     = np.radians((357.528 + 0.9856003*n) % 360)
+    lam   = np.radians((280.46 + 0.9856474*n + 1.915*np.sin(g) + 0.02*np.sin(2*g)) % 360)
+    eps   = math.radians(23.4393)
+    s_ra  = np.arctan2(math.cos(eps)*np.sin(lam), np.cos(lam))
+    s_dec = np.arcsin(np.clip(math.sin(eps)*np.sin(lam), -1, 1))
+    HA_s  = LST - s_ra[:,None]
+    s_s   = np.sin(s_dec[:,None])*math.sin(lat_r) + np.cos(s_dec[:,None])*math.cos(lat_r)*np.cos(HA_s)
+    alt_s = np.degrees(np.arcsin(np.clip(s_s, -1, 1)))
+    # Airmass — only show 1.0–2.5; everything else (day/night/am>2.5) is NaN (transparent)
+    am_raw = np.where(alt_t > 0.5, 1.0/np.sin(np.radians(np.maximum(alt_t, 0.5))), np.nan)
+    z = np.where((~np.isnan(am_raw)) & (am_raw <= 2.5), am_raw, np.nan)
+    # z.T  →  shape (n_hours, n_days) so Plotly maps rows→y(hours), cols→x(days)
+    z_T = z.T
+
+    # ── Twilight crossing times (from alt_s shape (n_days, n_hours)) ──────────
+    def crossings(threshold):
+        """Find UTC hours where sun crosses threshold for each day."""
+        H_arr = np.array(hours)
+        above = (alt_s >= threshold)          # (n_days, n_hours)
+        tr    = np.diff(above.astype(int), axis=1)  # (n_days, n_hours-1): -1=set, +1=rise
+        sets, rises = [], []
+        for i in range(len(doys)):
+            # Evening setting: last -1 transition
+            idx_s = np.where(tr[i] == -1)[0]
+            if len(idx_s):
+                j  = int(idx_s[-1])
+                da = float(alt_s[i, j+1]) - float(alt_s[i, j])
+                f  = (threshold - float(alt_s[i, j])) / da if abs(da) > 1e-9 else 0.5
+                sets.append(round(float(H_arr[j] + f*(H_arr[j+1]-H_arr[j])), 3))
+            else:
+                sets.append(None)
+            # Morning rising: first +1 transition
+            idx_r = np.where(tr[i] == 1)[0]
+            if len(idx_r):
+                j  = int(idx_r[0])
+                da = float(alt_s[i, j+1]) - float(alt_s[i, j])
+                f  = (threshold - float(alt_s[i, j])) / da if abs(da) > 1e-9 else 0.5
+                rises.append(round(float(H_arr[j] + f*(H_arr[j+1]-H_arr[j])), 3))
+            else:
+                rises.append(None)
+        return sets, rises
+
+    twil = {}
+    for thr, key in [(0, '0'), (-12, '12'), (-18, '18')]:
+        s, r = crossings(thr)
+        twil[f'set{key}']  = s
+        twil[f'rise{key}'] = r
+
+    return {"doys": doys, "hours": hours,
+            "z": [[None if (isinstance(v, float) and math.isnan(v)) else round(v,3) for v in row] for row in z_T.tolist()],
+            "twil": twil}
+
+def _am_pure(ra_deg, dec_deg, lat_deg, lon_deg):
+    dec_r = math.radians(dec_deg); lat_r = math.radians(lat_deg)
+    eps   = math.radians(23.4393)
+    doys  = list(range(1, 366, 1));  hours = [h/6 for h in range(144)]
+    z = []
+    for doy in doys:
+        n = doy - 1.0; g = math.radians((357.528+0.9856003*n)%360)
+        lam = math.radians((280.46+0.9856474*n+1.915*math.sin(g)+0.02*math.sin(2*g))%360)
+        s_ra  = math.atan2(math.cos(eps)*math.sin(lam), math.cos(lam))
+        s_dec = math.asin(max(-1.0,min(1.0, math.sin(eps)*math.sin(lam))))
+        row = []
+        for hour in hours:
+            jd  = 2451544.5 + n + hour/24.0
+            lst = math.radians((280.46061837+360.98564736629*(jd-2451545.0))%360) + math.radians(lon_deg)
+            a_s = math.degrees(math.asin(max(-1,min(1, math.sin(s_dec)*math.sin(lat_r)+math.cos(s_dec)*math.cos(lat_r)*math.cos(lst-s_ra)))))
+            a_t = math.degrees(math.asin(max(-1,min(1, math.sin(dec_r)*math.sin(lat_r)+math.cos(dec_r)*math.cos(lat_r)*math.cos(lst-math.radians(ra_deg))))))
+            if a_t <= 0.5: v = None
+            else:
+                am_v = 1.0/math.sin(math.radians(max(a_t, 0.5)))
+                v = None if am_v > 2.5 else round(am_v, 3)
+            row.append(v)
+        z.append(row)
+    # Transpose: z was built as [day][hour], Plotly needs [hour][day]
+    zh = len(hours); zd = len(doys)
+    z_T = [[z[d][h] for d in range(zd)] for h in range(zh)]
+    
+    # Compute twilight crossings with fine time resolution (1-minute steps)
+    twil = {'set0': [], 'rise0': [], 'set12': [], 'rise12': [], 'set18': [], 'rise18': []}
+    fine_hours = [i/60.0 for i in range(24*60)]  # Every minute for full 24 hours
+    
+    for doy in doys:
+        n = doy - 1.0
+        g = math.radians((357.528+0.9856003*n)%360)
+        lam = math.radians((280.46+0.9856474*n+1.915*math.sin(g)+0.02*math.sin(2*g))%360)
+        s_ra  = math.atan2(math.cos(eps)*math.sin(lam), math.cos(lam))
+        s_dec = math.asin(max(-1.0,min(1.0, math.sin(eps)*math.sin(lam))))
+        
+        # Compute sun altitude at fine time resolution
+        sun_alts = []
+        for hour in fine_hours:
+            jd = 2451544.5 + n + hour/24.0
+            lst = math.radians((280.46061837+360.98564736629*(jd-2451545.0))%360) + math.radians(lon_deg)
+            alt_s = math.degrees(math.asin(max(-1,min(1, math.sin(s_dec)*math.sin(lat_r)+math.cos(s_dec)*math.cos(lat_r)*math.cos(lst-s_ra)))))
+            sun_alts.append(alt_s)
+        
+        # Find crossings for each threshold
+        for thr, key in [(0, '0'), (-12, '12'), (-18, '18')]:
+            set_h, rise_h = None, None
+            # Evening set: last transition from above to below
+            for i in range(len(sun_alts)-1):
+                if sun_alts[i] >= thr and sun_alts[i+1] < thr:
+                    da = sun_alts[i+1] - sun_alts[i]
+                    f = (thr - sun_alts[i]) / da if abs(da) > 1e-9 else 0.5
+                    set_h = fine_hours[i] + f*(fine_hours[i+1]-fine_hours[i])
+            # Morning rise: first transition from below to above
+            for i in range(len(sun_alts)-1):
+                if sun_alts[i] < thr and sun_alts[i+1] >= thr:
+                    da = sun_alts[i+1] - sun_alts[i]
+                    f = (thr - sun_alts[i]) / da if abs(da) > 1e-9 else 0.5
+                    rise_h = fine_hours[i] + f*(fine_hours[i+1]-fine_hours[i])
+                    break
+            twil[f'set{key}'].append(round(set_h, 3) if set_h is not None else None)
+            twil[f'rise{key}'].append(round(rise_h, 3) if rise_h is not None else None)
+    
+    return {"doys": doys, "hours": hours, "z": z_T, "twil": twil}
+
+async def _render_observatory_plots(result, lat_deg, lon_deg):
+    ra  = float(result.get("ra", 0))
+    dec = float(result.get("dec", 0))
+    _set_status(_tr("Computing visibility plots…", "Calcul des graphiques de visibilité…"), "ok", loading=True)
+    await asyncio.sleep(0)  # yield to event loop so status updates
+    try:
+        v_sys  = result.get("v_sys")
+        v_sys_f = float(v_sys) if v_sys is not None else None
+        bary_doys, bary_vels = _bary_velocity(ra, dec, v_sys)
+        am = _airmass_grid(ra, dec, lat_deg, lon_deg)
+        has_obs = any(v is not None for row in am['z'] for v in row)
+        if not has_obs:
+            _set_status(_tr(
+                "This star is never observable from this location (always below horizon or airmass > 2.5).",
+                "Cette étoile n'est jamais observable depuis cet emplacement (toujours sous l'horizon ou masse d'air > 2,5)."),
+                "warn")
+            return
+        payload = _json.dumps({
+            "bary": {"doys": bary_doys, "vels": bary_vels, "vsys": v_sys_f},
+            "airmass": am
+        })
+        window.showPlots(payload)
+        _clear_status()
+    except Exception as exc:
+        _set_status(_tr(f"Plot error: {exc}", f"Erreur graphique : {exc}"), "error")
+
 def _js_lookup(event=None):   asyncio.ensure_future(_do_lookup())
 def _js_rerender(event=None): _do_rerender()
 
@@ -878,9 +1763,17 @@ _rerender_proxy = create_proxy(_js_rerender)
 
 if not hasattr(window, "CONSTFINDER_BOOT") or window.CONSTFINDER_BOOT is None:
     window.CONSTFINDER_BOOT = js.Object.new()
-window.CONSTFINDER_BOOT.doLookup  = _lookup_proxy
-window.CONSTFINDER_BOOT.rerender  = _rerender_proxy
-window.CONSTFINDER_BOOT.ready     = True
+def _js_rerender_plots(event=None):
+    if _last_result is not None:
+        lat = float(getattr(window, "OBS_LAT", 45.455))
+        lon = float(getattr(window, "OBS_LON", -71.153))
+        asyncio.ensure_future(_render_observatory_plots(_last_result, lat, lon))
+_rerender_plots_proxy = create_proxy(_js_rerender_plots)
+
+window.CONSTFINDER_BOOT.doLookup      = _lookup_proxy
+window.CONSTFINDER_BOOT.rerender      = _rerender_proxy
+window.CONSTFINDER_BOOT.rerenderPlots = _rerender_plots_proxy
+window.CONSTFINDER_BOOT.ready         = True
 if hasattr(window, "flushPendingLookup"):
     window.flushPendingLookup()
   </script>
