@@ -662,18 +662,7 @@
            align:'left', xanchor:'left', yanchor:'top'},
         ],
       };
-      Plotly.newPlot('airmass_plot', traces, layout, {displayModeBar:false, responsive:true})
-        .then(() => {
-          // Add click handler to select a day
-          const plotDiv = document.getElementById('airmass_plot');
-          plotDiv.on('plotly_click', (data) => {
-            if (data.points && data.points.length > 0) {
-              const doy = Math.round(data.points[0].x);
-              window.renderAirmassDay(window._airmassData, doy);
-            }
-          });
-        });
-        });
+      Plotly.newPlot('airmass_plot', traces, layout, {displayModeBar:false, responsive:true});
     };
 
     /* ── Single-day airmass plot ── */
