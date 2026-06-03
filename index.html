@@ -1429,6 +1429,8 @@ _CDATA = {
 }
 
 SIMBAD_TAP = "https://simbad.cds.unistra.fr/simbad/sim-tap/sync"
+CACHE_PREFIX = "constellation_cache_v1_"
+CACHE_MAX_AGE_SEC = 30 * 24 * 3600  # 30 days
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 def _lang():
@@ -1471,6 +1473,42 @@ def _fmt_dec(dec_deg):
     d, m = int(ta//3600), int((ta%3600)//60)
     s = ta - 3600*d - 60*m
     return f"{sgn}{d:02d}° {m:02d}′ {s:04.1f}″"
+
+def _target_cache_key(target):
+    """Generate cache key for a target name."""
+    return CACHE_PREFIX + target.strip().lower()
+
+def _load_cached_result(target):
+    """Load cached SIMBAD result if available and not expired."""
+    key = _target_cache_key(target)
+    try:
+        raw = window.localStorage.getItem(key)
+        if raw is None:
+            return None
+        blob = _json.loads(raw)
+        ts = float(blob.get("ts", 0))
+        now_s = window.Date.now() / 1000.0
+        if now_s - ts > CACHE_MAX_AGE_SEC:
+            window.localStorage.removeItem(key)
+            return None
+        data = blob.get("data")
+        if isinstance(data, dict):
+            return data
+        return None
+    except Exception:
+        return None
+
+def _save_cached_result(target, result):
+    """Save SIMBAD result to localStorage cache."""
+    key = _target_cache_key(target)
+    try:
+        blob = {
+            "ts": window.Date.now() / 1000.0,
+            "data": result,
+        }
+        window.localStorage.setItem(key, _json.dumps(blob))
+    except Exception:
+        pass  # Silently fail if localStorage is full or disabled
 
 async def _tap_query(adql, timeout_s=20):
     params = "request=doQuery&lang=adql&format=json&query=" + quote_plus(adql)
@@ -1676,6 +1714,7 @@ async def _do_lookup(event=None):
             _set_status(_tr(f'Coordinates not found for “{result.get("main_id","?")}”.',
                            f'Coordonnées introuvables pour « {result.get("main_id","?")} ».'), "error"); return
         _last_result = result
+        _save_cached_result(target, result)  # Save to cache
         _render_result(result)
         lat = float(getattr(window, "OBS_LAT", 45.455))
         lon = float(getattr(window, "OBS_LON", -71.153))
