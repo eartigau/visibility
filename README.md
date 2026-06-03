@@ -6,8 +6,9 @@
 
 ## 🌟 Features
 
-### 🎯 Star Lookup & Constellation Identification
+### � Star Lookup & Constellation Identification
 - **SIMBAD Integration**: Query any star by name or coordinates
+- **Automatic Mirror Fallback**: CDS Strasbourg → Harvard CfA for reliability
 - **Flexible Input**: Decimal degrees (`101.287 −16.716`), sexagesimal (`06:44:59 −16:42:58`), or HMS/DMS format
 - **IAU Boundaries**: Automatic constellation identification using official IAU/Roman (1987) boundaries
 - **Smart Caching**: 30-day browser localStorage cache for instant repeat lookups
@@ -142,7 +143,7 @@ Use the telluric recommendations table:
 - **Time resolution**: 10-minute intervals for airmass (144/day), 1-minute for twilight (1440/day)
 
 ### Data Sources
-- **SIMBAD TAP**: [CDS Strasbourg](https://simbad.cds.unistra.fr/)
+- **SIMBAD TAP**: [CDS Strasbourg](https://simbad.cds.unistra.fr/) (primary) with automatic fallback to [Harvard CfA mirror](https://simbad.harvard.edu/)
 - **Constellation boundaries**: IAU Roman (1987) / Delporte (1930)
 - **Telluric stars**: Curated B/A-type calibrator catalog for NIRPS
 
@@ -152,13 +153,15 @@ Use the telluric recommendations table:
 - ✅ Safari 14+
 - ⚠️ Requires JavaScript and localStorage enabled
 
-## 📦 Offline Capability
+## 📦 Offline Capability & Reliability
 
-**Smart caching system**:
+**Smart caching + mirror fallback**:
 - SIMBAD results cached for **30 days** in browser localStorage
+- **Automatic mirror switching**: If CDS Strasbourg fails, automatically tries Harvard mirror
 - Telluric stars **hardcoded** (no network required)
 - Works offline for previously searched targets
 - Cache key format: `constellation_cache_v1_[starname]`
+- Resilient against single-point SIMBAD outages
 
 ## 🌠 Telluric Star Catalog
 
