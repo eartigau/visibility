@@ -195,7 +195,6 @@
         <button class="obs-btn" data-obs="VLT"  type="button">Paranal</button>
         <button class="obs-btn" data-obs="LC"   type="button">Las Campanas</button>
         <button class="obs-btn" data-obs="LS"   type="button">La Silla</button>
-        <button class="obs-btn" data-obs="Garching" type="button">Garching</button>
         <button class="obs-btn" data-obs="LP"   type="button">La Palma</button>
         <button class="obs-btn" data-obs="LBT"  type="button">LBT</button>
         <button class="obs-btn" data-obs="KP"   type="button">Kitt Peak</button>
@@ -399,7 +398,6 @@
       VLT:  { label: 'Paranal — VLT (2635 m)',          lat: -24.628, lon:  -70.404, utc: -4, dst: true  },
       LC:   { label: 'Las Campanas — Magellan (2380 m)',lat: -29.010, lon:  -70.692, utc: -4, dst: true  },
       LS:   { label: 'La Silla — ESO 3.6m (2400 m)',    lat: -29.258, lon:  -70.735, utc: -4, dst: true  },
-      Garching: { label: 'Garching — ESO HQ → La Silla', lat: -29.258, lon:  -70.735, utc: -4, dst: true  },
       LP:   { label: 'La Palma — GTC/WHT (2396 m)',     lat:  28.762, lon:  -17.890, utc:  0, dst: true  },
       LBT:  { label: 'Mt Graham — LBT (3221 m)',        lat:  32.702, lon: -109.889, utc: -7, dst: false },
       KP:   { label: 'Kitt Peak — Mayall 4m (2096 m)',  lat:  31.963, lon: -111.600, utc: -7, dst: false },
@@ -458,7 +456,6 @@
       document.querySelectorAll('.obs-btn').forEach(b => b.classList.remove('obs-active'));
       const btn = document.querySelector(`[data-obs="${key}"]`);
       if (btn) btn.classList.add('obs-active');
-      _compute_and_show_telluric_standalone();
       // Re-render plots if a result is loaded
       if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.rerenderPlots) {
         window.CONSTFINDER_BOOT.rerenderPlots();
