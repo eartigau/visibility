@@ -424,6 +424,10 @@
           if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.rerenderPlots) {
             window.CONSTFINDER_BOOT.rerenderPlots();
           }
+          /* compute telluric recommendations for new observatory */
+          if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.computeTelluric) {
+            window.CONSTFINDER_BOOT.computeTelluric();
+          }
         });
       });
       /* Sync input changes → OBS_LAT/OBS_LON and clear active button */
@@ -437,11 +441,17 @@
           if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.rerenderPlots) {
             window.CONSTFINDER_BOOT.rerenderPlots();
           }
+          /* compute telluric recommendations for new observatory */
+          if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.computeTelluric) {
+            window.CONSTFINDER_BOOT.computeTelluric();
+          }
         });
       });
       document.getElementById('dst_check').addEventListener('change', function() {
         window.DST_OFFSET = this.checked ? 1 : 0;
         if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.rerenderPlots) window.CONSTFINDER_BOOT.rerenderPlots();
+        /* compute telluric recommendations for new DST setting */
+        if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.computeTelluric) window.CONSTFINDER_BOOT.computeTelluric();
       });
       /* Default */
       window.OBS_LAT = OBS.OMM.lat;
@@ -935,6 +945,14 @@
       window.renderAirmassPlot(d.airmass);
       window.renderAirmassDay(d.airmass, curDoy());  // Show today by default
       window.renderBaryPlot(d.bary);
+      if (d.telluric && d.telluric.length > 0) {
+        window.renderTelluricTable(d.telluric);
+      }
+    };
+
+    /* Called from Python for telluric-only updates (no star lookup) */
+    window.showTelluricOnly = function (jsonStr) {
+      const d = JSON.parse(jsonStr);
       if (d.telluric && d.telluric.length > 0) {
         window.renderTelluricTable(d.telluric);
       }
@@ -1968,8 +1986,66 @@ async def _render_observatory_plots(result, lat_deg, lon_deg):
 def _js_lookup(event=None):   asyncio.ensure_future(_do_lookup())
 def _js_rerender(event=None): _do_rerender()
 
+async def _compute_and_show_telluric_standalone():
+    """Compute and display telluric recommendations based on observatory alone."""
+    try:
+        import datetime
+        lat_deg = float(getattr(window, "OBS_LAT", 45.455))
+        lon_deg = float(getattr(window, "OBS_LON", -71.153))
+        utc_offset = float(getattr(window, "OBS_UTC_OFFSET", 0))
+        dst_active = bool(document.getElementById('dst_check').checked)
+        if dst_active:
+            utc_offset += 1
+        
+        doy = datetime.datetime.now().timetuple().tm_yday
+        
+        # Compute sun position to get sunset/sunrise times for today
+        # Use simplified calculation from _am_pure
+        import math
+        n = doy - 1.0
+        g = math.radians((357.528 + 0.9856003 * n) % 360)
+        lam = math.radians((280.46 + 0.9856474 * n + 1.915 * math.sin(g) + 0.02 * math.sin(2 * g)) % 360)
+        eps = math.radians(23.4393)
+        s_ra = math.atan2(math.cos(eps) * math.sin(lam), math.cos(lam))
+        s_dec = math.asin(max(-1.0, min(1.0, math.sin(eps) * math.sin(lam))))
+        
+        lat_r = math.radians(lat_deg)
+        
+        # Find sunset (0°) and sunrise times by checking hourly
+        sunset_utc = None
+        sunrise_utc = None
+        
+        for hour_tenth in range(240):  # 24 hours * 10 steps
+            hour = hour_tenth / 10.0
+            jd = 2451544.5 + n + hour / 24.0
+            lst = math.radians((280.46061837 + 360.98564736629 * (jd - 2451545.0)) % 360) + math.radians(lon_deg)
+            sun_alt = math.degrees(math.asin(max(-1, min(1, 
+                math.sin(s_dec) * math.sin(lat_r) + 
+                math.cos(s_dec) * math.cos(lat_r) * math.cos(lst - s_ra)))))
+            
+            if sunset_utc is None and hour > 6 and sun_alt < 0:
+                sunset_utc = hour
+            if sunset_utc is not None and sunrise_utc is None and hour > 12 and sun_alt > 0:
+                sunrise_utc = hour
+                break
+        
+        if sunset_utc is None or sunrise_utc is None:
+            # Polar day/night - skip telluric table
+            return
+        
+        telluric_recs = _compute_telluric_recs(doy, lat_deg, lon_deg, utc_offset, sunset_utc, sunrise_utc)
+        
+        payload = _json.dumps({"telluric": telluric_recs})
+        window.showTelluricOnly(payload)
+    except Exception as exc:
+        console.error(f"Telluric computation error: {exc}")
+
+def _js_compute_telluric(event=None):
+    asyncio.ensure_future(_compute_and_show_telluric_standalone())
+
 _lookup_proxy  = create_proxy(_js_lookup)
 _rerender_proxy = create_proxy(_js_rerender)
+_compute_telluric_proxy = create_proxy(_js_compute_telluric)
 
 if not hasattr(window, "CONSTFINDER_BOOT") or window.CONSTFINDER_BOOT is None:
     window.CONSTFINDER_BOOT = js.Object.new()
@@ -1983,9 +2059,13 @@ _rerender_plots_proxy = create_proxy(_js_rerender_plots)
 window.CONSTFINDER_BOOT.doLookup      = _lookup_proxy
 window.CONSTFINDER_BOOT.rerender      = _rerender_proxy
 window.CONSTFINDER_BOOT.rerenderPlots = _rerender_plots_proxy
+window.CONSTFINDER_BOOT.computeTelluric = _compute_telluric_proxy
 window.CONSTFINDER_BOOT.ready         = True
 if hasattr(window, "flushPendingLookup"):
     window.flushPendingLookup()
+
+# Compute telluric recommendations on page load
+asyncio.ensure_future(_compute_and_show_telluric_standalone())
   </script>
 </body>
 </html>
