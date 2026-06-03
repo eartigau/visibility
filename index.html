@@ -1647,19 +1647,37 @@ def _save_cached_result(target, result):
     except Exception:
         pass  # Silently fail if localStorage is full or disabled
 
-async def _tap_query(adql, timeout_s=20):
+async def _tap_query(adql, timeout_s=20, target_name=""):
     """Query SIMBAD TAP service with automatic mirror fallback."""
     params = "request=doQuery&lang=adql&format=json&query=" + quote_plus(adql)
     last_error = None
     
-    for mirror_url in SIMBAD_MIRRORS:
+    mirror_names = ["CDS Strasbourg", "Harvard CfA"]
+    
+    for idx, mirror_url in enumerate(SIMBAD_MIRRORS):
+        mirror_label = mirror_names[idx] if idx < len(mirror_names) else f"Mirror {idx+1}"
+        
+        # Show which server we're trying
+        if idx == 0:
+            msg = _tr(f'Searching SIMBAD ({mirror_label}) for "{target_name}"…',
+                     f'Recherche de « {target_name} » dans SIMBAD ({mirror_label})…')
+        else:
+            msg = _tr(f'Trying {mirror_label} mirror…',
+                     f'Essai du miroir {mirror_label}…')
+        _set_status(msg, "ok", loading=True)
+        
         try:
             resp = await asyncio.wait_for(
                 pyfetch(f"{mirror_url}?{params}", method="GET"), 
                 timeout=timeout_s
             )
             if resp.ok:
-                return await asyncio.wait_for(resp.json(), timeout=timeout_s)
+                result = await asyncio.wait_for(resp.json(), timeout=timeout_s)
+                # Success! Show which server worked
+                success_msg = _tr(f'Retrieved from {mirror_label}',
+                                f'Récupéré depuis {mirror_label}')
+                _set_status(success_msg, "ok", loading=False)
+                return result
             last_error = f"HTTP {resp.status}"
         except asyncio.TimeoutError:
             last_error = "timeout"
@@ -1672,10 +1690,19 @@ async def _tap_query(adql, timeout_s=20):
     raise RuntimeError(f"All SIMBAD mirrors failed. Last error: {last_error}")
 
 async def _resolve_star(target):
+    # Check cache first
+    cached = _load_cached_result(target)
+    if cached is not None:
+        cache_msg = _tr(f'Loaded "{target}" from cache',
+                       f'« {target} » chargé depuis le cache')
+        _set_status(cache_msg, "ok", loading=False)
+        return cached
+    
+    # Query SIMBAD
     adql = f"""SELECT TOP 1 b.main_id, b.ra, b.dec, b.otype_txt, b.rvz_radvel
     FROM basic AS b JOIN ident AS i ON i.oidref = b.oid
     WHERE i.id = '{_safe_sql(target)}'"""
-    payload = await _tap_query(adql)
+    payload = await _tap_query(adql, target_name=target)
     rows = payload.get("data", [])
     if not rows: return None
     row = rows[0]
@@ -1685,7 +1712,11 @@ async def _resolve_star(target):
             if v is None or str(v).strip().lower() in ("","none","null"): return None
             return str(v).strip()
         except Exception: return None
-    return {"main_id": g(0), "ra": g(1), "dec": g(2), "otype": g(3), "v_sys": g(4)}
+    result = {"main_id": g(0), "ra": g(1), "dec": g(2), "otype": g(3), "v_sys": g(4)}
+    
+    # Save to cache
+    _save_cached_result(target, result)
+    return result
 
 # ── coordinate parser ────────────────────────────────────────────────────────
 import re as _re
@@ -1854,7 +1885,6 @@ async def _do_lookup(event=None):
         btn.disabled = False; inp.disabled = False
         return
     # ── name lookup via SIMBAD ──
-    _set_status(_tr(f'Searching SIMBAD for “{target}”…', f'Recherche de « {target} » dans SIMBAD…'), "ok", loading=True)
     _set_result("")
     _last_result = None
     btn.disabled = True; inp.disabled = True
@@ -1869,7 +1899,6 @@ async def _do_lookup(event=None):
             _set_status(_tr(f'Coordinates not found for “{result.get("main_id","?")}”.',
                            f'Coordonnées introuvables pour « {result.get("main_id","?")} ».'), "error"); return
         _last_result = result
-        _save_cached_result(target, result)  # Save to cache
         _render_result(result)
         lat = float(getattr(window, "OBS_LAT", 45.455))
         lon = float(getattr(window, "OBS_LON", -71.153))
