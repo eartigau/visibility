@@ -880,6 +880,7 @@
       const d = JSON.parse(jsonStr);
       document.getElementById('plot_area').style.display = 'block';
       window.renderAirmassPlot(d.airmass);
+      window.renderAirmassDay(d.airmass, curDoy());  // Show today by default
       window.renderBaryPlot(d.bary);
     };
 
