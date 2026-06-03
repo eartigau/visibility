@@ -1,0 +1,79 @@
+stars:
+  HR875:
+    ra: 44.15593390855
+    dec: -3.71232192627
+    name: HR875
+  HR1903:
+    ra: 84.053388941
+    dec: -1.201919136
+    name: HR1903
+  HR4023:
+    ra: 153.68398220708
+    dec: -42.12194258111
+    name: HR4023
+  HR5671:
+    ra: 229.7274220385625
+    dec: -68.67954667374444
+    name: HR5671
+  HR3117:
+    ra: 119.19466705582
+    dec: -52.98234546298
+    name: HR3117
+  HR8709:
+    ra: 343.66252607413
+    dec: -15.8208195652
+    name: HR8709
+  HR3314:
+    ra: 126.41513277136585
+    dec: -3.90642721868194
+    name: HR3314
+  HR3131:
+    ra: 119.96686484006
+    dec: -18.39921691203
+    name: HR3131
+  HR9098:
+    ra: 0.9349492958375
+    dec: -17.33599144286444
+    name: HR9098
+  HR5107:
+    ra: 203.67329732802997
+    dec: -0.59581641612
+    name: HR5107
+  HR6743:
+    ra: 271.65779704083
+    dec: -50.09147570083
+    name: HR6743
+  HR7590:
+    ra: 300.148148245
+    dec: -72.91050549417
+    name: HR7590
+  HR4467:
+    ra: 173.94532537821
+    dec: -63.01983499360999
+    name: HR4467
+  HR7830:
+    ra: 307.47462289485
+    dec: -18.58318352159
+    name: HR7830
+  HR806:
+    ra: 39.89733837167
+    dec: -68.26694731111
+    name: HR806
+guidelines:
+  purpose: "Telluric stars should be observed in evening twilight to gather a library\
+    \ \nof featureless spectra with only telluric absorption imprint.\n"
+  timing:
+  - Observe either in evening OR morning twilight (not both)
+  - As long as the Sun is below the horizon, sky is dark enough
+  airmass_strategy:
+    even_days: Observe LOW airmass target (closer to zenith)
+    odd_days: Observe HIGH airmass target (1.8-2.5 airmass)
+    note: Check day of month at beginning of night
+  modes:
+  - Observe in both HA and HE modes
+  - At least one HA observation per week required
+  flexibility:
+  - Missing one night is fine - we want ~1 per night on average
+  - Do NOT add random hot stars - use only listed targets
+  - Any star from the list can be observed on any night
+  - If only one fiber available, prioritize HE but keep HA quota

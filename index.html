@@ -128,6 +128,15 @@
     .plot-card { background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:1.1rem 1.2rem; backdrop-filter:blur(14px); margin-bottom:1rem; }
     .plot-card:last-child { margin-bottom:0; }
     .plot-title { font-family:"Exo 2",sans-serif; font-size:.78rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:.4rem; }
+    /* ── telluric table ── */
+    .telluric-table { width:100%; border-collapse:collapse; font-size:.82rem; margin-top:.6rem; }
+    .telluric-table th { text-align:left; padding:.4rem .6rem; font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); border-bottom:1px solid rgba(120,160,255,.15); font-weight:600; }
+    .telluric-table td { padding:.45rem .6rem; border-bottom:1px solid rgba(120,160,255,.08); color:var(--ink); }
+    .telluric-table tbody tr:hover { background:rgba(100,140,255,.08); }
+    .telluric-table .time-col { font-family:"Exo 2",monospace; color:var(--accent-2); }
+    .telluric-table .star-col { font-family:"Exo 2",monospace; }
+    .telluric-table .am-col { font-family:"Exo 2",monospace; text-align:right; }
+    .telluric-table .recommend { background:rgba(255,200,50,.12); font-weight:600; }
     @media (max-width:600px) { .result-grid{grid-template-columns:1fr;} }
     @media (max-width:520px) { h1{font-size:1.9rem;} .search-row{flex-direction:column;} .const-name{font-size:2.2rem;} }
   </style>
@@ -219,6 +228,10 @@
       <div class="plot-card">
         <div class="plot-title" id="t_am_day_title">Airmass for selected night</div>
         <div id="airmass_day_plot"></div>
+      </div>
+      <div class="plot-card" id="telluric_card" style="display:none;">
+        <div class="plot-title" id="t_telluric_title">Telluric Star Recommendations</div>
+        <div id="telluric_table"></div>
       </div>
       <div class="plot-card">
         <div class="plot-title" id="t_bary_title">Barycentric velocity (Earth orbital component only)</div>
@@ -922,6 +935,61 @@
       window.renderAirmassPlot(d.airmass);
       window.renderAirmassDay(d.airmass, curDoy());  // Show today by default
       window.renderBaryPlot(d.bary);
+      if (d.telluric && d.telluric.length > 0) {
+        window.renderTelluricTable(d.telluric);
+      }
+    };
+
+    /* ── Telluric stars table ── */
+    window.renderTelluricTable = function (telluricData) {
+      const card = document.getElementById('telluric_card');
+      const container = document.getElementById('telluric_table');
+      
+      if (!telluricData || telluricData.length === 0) {
+        card.style.display = 'none';
+        return;
+      }
+      
+      const months = LANG === 'fr' 
+        ? ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'aoû', 'sep', 'oct', 'nov', 'déc']
+        : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      const dayNum = telluricData[0].day;
+      const year = new Date().getFullYear();
+      const date = new Date(year, 0, dayNum);
+      const dayOfMonth = date.getDate();
+      const isEven = dayOfMonth % 2 === 0;
+      
+      let html = '<table class="telluric-table"><thead><tr>';
+      html += '<th>Time (Local)</th>';
+      html += '<th>High (Low AM)</th>';
+      html += '<th>AM</th>';
+      html += '<th>Low (High AM)</th>';
+      html += '<th>AM</th>';
+      html += '</tr></thead><tbody>';
+      
+      telluricData.forEach(row => {
+        const highClass = isEven ? 'recommend' : '';
+        const lowClass = isEven ? '' : 'recommend';
+        
+        html += '<tr>';
+        html += `<td class="time-col">${row.time}</td>`;
+        html += `<td class="star-col ${highClass}">${row.high_star || '—'}</td>`;
+        html += `<td class="am-col ${highClass}">${row.high_am ? row.high_am.toFixed(2) : '—'}</td>`;
+        html += `<td class="star-col ${lowClass}">${row.low_star || '—'}</td>`;
+        html += `<td class="am-col ${lowClass}">${row.low_am ? row.low_am.toFixed(2) : '—'}</td>`;
+        html += '</tr>';
+      });
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+      card.style.display = 'block';
+      
+      // Update title with day info
+      const titleEl = document.getElementById('t_telluric_title');
+      const dayType = isEven ? (LANG === 'fr' ? 'pair' : 'even') : (LANG === 'fr' ? 'impair' : 'odd');
+      const dateStr = `${date.getDate()} ${months[date.getMonth()]}`;
+      titleEl.textContent = `Telluric Stars — ${dateStr} (${dayType} day)`;
     };
 
   })();
@@ -1766,6 +1834,93 @@ def _am_pure(ra_deg, dec_deg, lat_deg, lon_deg):
     
     return {"doys": doys, "hours": hours, "z": z_T, "twil": twil}
 
+# Telluric stars from YAML (coordinates in decimal degrees J2000)
+_TELLURIC_STARS = {
+    "HR875": {"ra": 44.15593, "dec": -3.71232},
+    "HR1903": {"ra": 84.053389, "dec": -1.201919},
+    "HR3117": {"ra": 119.19467, "dec": -52.98235},
+    "HR3131": {"ra": 119.96686, "dec": -18.39922},
+    "HR3314": {"ra": 126.41513, "dec": -3.90643},
+    "HR4023": {"ra": 153.68398, "dec": -42.12194},
+    "HR4467": {"ra": 173.94533, "dec": -63.01983},
+    "HR5107": {"ra": 203.67330, "dec": -0.59582},
+    "HR5671": {"ra": 229.72742, "dec": -68.67955},
+    "HR6743": {"ra": 271.65780, "dec": -50.09148},
+    "HR7590": {"ra": 300.14815, "dec": -72.91051},
+    "HR7830": {"ra": 307.47462, "dec": -18.58318},
+    "HR8709": {"ra": 343.66253, "dec": -15.82082},
+    "HR9098": {"ra": 0.93495, "dec": -17.33599},
+    "HR806": {"ra": 39.89734, "dec": -68.26695},
+}
+
+def _compute_telluric_recs(doy, lat_deg, lon_deg, utc_offset, sunset_utc, sunrise_utc):
+    """Compute telluric star recommendations for half-hour intervals between sunset and sunrise."""
+    if sunset_utc is None or sunrise_utc is None:
+        return []
+    
+    # Convert to continuous time range
+    sunset = sunset_utc
+    sunrise = sunrise_utc if sunrise_utc > sunset else sunrise_utc + 24
+    
+    # Generate half-hour intervals from sunset to sunrise
+    intervals = []
+    t = math.ceil(sunset * 2) / 2  # Round up to nearest half hour
+    while t < sunrise:
+        intervals.append(t)
+        t += 0.5
+    
+    recommendations = []
+    dec_r_lat = math.radians(lat_deg)
+    
+    for utc_hour in intervals:
+        # Compute airmass for all telluric stars at this time
+        stars_am = []
+        
+        for star_name, coords in _TELLURIC_STARS.items():
+            ra_deg = coords["ra"]
+            dec_deg = coords["dec"]
+            dec_r = math.radians(dec_deg)
+            
+            # Compute LST and altitude
+            n = doy - 1.0
+            jd = 2451544.5 + n + (utc_hour % 24) / 24.0
+            lst = math.radians((280.46061837 + 360.98564736629 * (jd - 2451545.0)) % 360) + math.radians(lon_deg)
+            
+            cos_alt = math.sin(dec_r) * math.sin(dec_r_lat) + math.cos(dec_r) * math.cos(dec_r_lat) * math.cos(lst - math.radians(ra_deg))
+            alt_rad = math.asin(max(-1, min(1, cos_alt)))
+            alt_deg = math.degrees(alt_rad)
+            
+            if alt_deg > 0.5:  # Above horizon
+                am = 1.0 / math.sin(alt_rad)
+                if am <= 3.5:
+                    stars_am.append((star_name, am))
+        
+        # Find best high star (minimum airmass, closest to zenith)
+        high_star, high_am = None, None
+        if stars_am:
+            high_star, high_am = min(stars_am, key=lambda x: x[1])
+        
+        # Find best low star (airmass 1.8-2.5, closest to 1.8)
+        low_candidates = [(name, am) for name, am in stars_am if 1.8 <= am <= 2.5]
+        low_star, low_am = None, None
+        if low_candidates:
+            low_star, low_am = min(low_candidates, key=lambda x: abs(x[1] - 1.8))
+        
+        # Format local time
+        local_hour = (utc_hour + utc_offset) % 24
+        time_str = f"{int(local_hour):02d}:{int((local_hour % 1) * 60):02d}"
+        
+        recommendations.append({
+            "time": time_str,
+            "high_star": high_star,
+            "high_am": high_am,
+            "low_star": low_star,
+            "low_am": low_am,
+            "day": doy
+        })
+    
+    return recommendations
+
 async def _render_observatory_plots(result, lat_deg, lon_deg):
     ra  = float(result.get("ra", 0))
     dec = float(result.get("dec", 0))
@@ -1783,9 +1938,27 @@ async def _render_observatory_plots(result, lat_deg, lon_deg):
                 "Cette étoile n'est jamais observable depuis cet emplacement (toujours sous l'horizon ou masse d'air > 3,5)."),
                 "warn")
             return
+        
+        # Compute telluric recommendations for today
+        import datetime
+        doy = datetime.datetime.now().timetuple().tm_yday
+        utc_offset = float(window.OBS_UTC_OFFSET or 0)
+        dst_active = bool(document.getElementById('dst_check').checked)
+        if dst_active:
+            utc_offset += 1
+        
+        # Get sunset/sunrise times for today
+        twil = am.get('twil', {})
+        doy_idx = am['doys'].index(doy) if doy in am['doys'] else 0
+        sunset_utc = twil.get('set0', [None] * len(am['doys']))[doy_idx]
+        sunrise_utc = twil.get('rise0', [None] * len(am['doys']))[doy_idx]
+        
+        telluric_recs = _compute_telluric_recs(doy, lat_deg, lon_deg, utc_offset, sunset_utc, sunrise_utc)
+        
         payload = _json.dumps({
             "bary": {"doys": bary_doys, "vels": bary_vels, "vsys": v_sys_f},
-            "airmass": am
+            "airmass": am,
+            "telluric": telluric_recs
         })
         window.showPlots(payload)
         _clear_status()
