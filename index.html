@@ -1709,7 +1709,7 @@ def _am_pure(ra_deg, dec_deg, lat_deg, lon_deg):
             if a_t <= 0.5: v = None
             else:
                 am_v = 1.0/math.sin(math.radians(max(a_t, 0.5)))
-                v = None if am_v > 2.5 else round(am_v, 3)
+                v = None if am_v > 3.5 else round(am_v, 3)
             row.append(v)
         z.append(row)
     # Transpose: z was built as [day][hour], Plotly needs [hour][day]
@@ -1769,8 +1769,8 @@ async def _render_observatory_plots(result, lat_deg, lon_deg):
         has_obs = any(v is not None for row in am['z'] for v in row)
         if not has_obs:
             _set_status(_tr(
-                "This star is never observable from this location (always below horizon or airmass > 2.5).",
-                "Cette étoile n'est jamais observable depuis cet emplacement (toujours sous l'horizon ou masse d'air > 2,5)."),
+                "This star is never observable from this location (always below horizon or airmass > 3.5).",
+                "Cette étoile n'est jamais observable depuis cet emplacement (toujours sous l'horizon ou masse d'air > 3,5)."),
                 "warn")
             return
         payload = _json.dumps({
