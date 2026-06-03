@@ -1562,7 +1562,10 @@ _CDATA = {
    ("Le Petit Renard","Introduit par Hevelius. La Nébuleuse de l'Haltère (M27), la première nébuleuse planétaire jamais découverte (par Messier en 1764), s'y trouve.")),
 }
 
-SIMBAD_TAP = "https://simbad.cds.unistra.fr/simbad/sim-tap/sync"
+SIMBAD_MIRRORS = [
+    "https://simbad.cds.unistra.fr/simbad/sim-tap/sync",  # CDS Strasbourg (primary)
+    "https://simbad.harvard.edu/simbad/sim-tap/sync",     # Harvard CfA (mirror)
+]
 CACHE_PREFIX = "constellation_cache_v1_"
 CACHE_MAX_AGE_SEC = 30 * 24 * 3600  # 30 days
 
@@ -1645,10 +1648,28 @@ def _save_cached_result(target, result):
         pass  # Silently fail if localStorage is full or disabled
 
 async def _tap_query(adql, timeout_s=20):
+    """Query SIMBAD TAP service with automatic mirror fallback."""
     params = "request=doQuery&lang=adql&format=json&query=" + quote_plus(adql)
-    resp = await asyncio.wait_for(pyfetch(f"{SIMBAD_TAP}?{params}", method="GET"), timeout=timeout_s)
-    if not resp.ok: raise RuntimeError(f"SIMBAD HTTP {resp.status}")
-    return await asyncio.wait_for(resp.json(), timeout=timeout_s)
+    last_error = None
+    
+    for mirror_url in SIMBAD_MIRRORS:
+        try:
+            resp = await asyncio.wait_for(
+                pyfetch(f"{mirror_url}?{params}", method="GET"), 
+                timeout=timeout_s
+            )
+            if resp.ok:
+                return await asyncio.wait_for(resp.json(), timeout=timeout_s)
+            last_error = f"HTTP {resp.status}"
+        except asyncio.TimeoutError:
+            last_error = "timeout"
+            continue  # Try next mirror
+        except Exception as e:
+            last_error = str(e)
+            continue  # Try next mirror
+    
+    # All mirrors failed
+    raise RuntimeError(f"All SIMBAD mirrors failed. Last error: {last_error}")
 
 async def _resolve_star(target):
     adql = f"""SELECT TOP 1 b.main_id, b.ra, b.dec, b.otype_txt, b.rvz_radvel
