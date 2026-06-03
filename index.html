@@ -1130,14 +1130,20 @@
         const highClass = isEven ? 'recommend' : '';
         const lowClass = isEven ? '' : 'recommend';
         
+        // Format airmass: show — if > 2.5 or missing
+        const highAM = (row.high_am && row.high_am <= 2.5) ? row.high_am.toFixed(2) : '—';
+        const lowAM = (row.low_am && row.low_am <= 2.5) ? row.low_am.toFixed(2) : '—';
+        const highStar = (row.high_star && row.high_am && row.high_am <= 2.5) ? row.high_star : '—';
+        const lowStar = (row.low_star && row.low_am && row.low_am <= 2.5) ? row.low_star : '—';
+        
         html += '<tr>';
         html += `<td class="time-col">${row.local_time || '—'}</td>`;
         html += `<td class="time-col">${row.utc_time || '—'}</td>`;
         html += `<td class="am-col">${row.sun_alt !== undefined ? row.sun_alt.toFixed(1) + '°' : '—'}</td>`;
-        html += `<td class="star-col ${highClass}">${row.high_star || '—'}</td>`;
-        html += `<td class="am-col ${highClass}">${row.high_am ? row.high_am.toFixed(2) : '—'}</td>`;
-        html += `<td class="star-col ${lowClass}">${row.low_star || '—'}</td>`;
-        html += `<td class="am-col ${lowClass}">${row.low_am ? row.low_am.toFixed(2) : '—'}</td>`;
+        html += `<td class="star-col ${highClass}">${highStar}</td>`;
+        html += `<td class="am-col ${highClass}">${highAM}</td>`;
+        html += `<td class="star-col ${lowClass}">${lowStar}</td>`;
+        html += `<td class="am-col ${lowClass}">${lowAM}</td>`;
         html += '</tr>';
       });
       
