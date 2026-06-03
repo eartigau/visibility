@@ -195,6 +195,7 @@
         <button class="obs-btn" data-obs="VLT"  type="button">Paranal</button>
         <button class="obs-btn" data-obs="LC"   type="button">Las Campanas</button>
         <button class="obs-btn" data-obs="LS"   type="button">La Silla</button>
+        <button class="obs-btn" data-obs="Garching" type="button">Garching</button>
         <button class="obs-btn" data-obs="LP"   type="button">La Palma</button>
         <button class="obs-btn" data-obs="LBT"  type="button">LBT</button>
         <button class="obs-btn" data-obs="KP"   type="button">Kitt Peak</button>
@@ -398,38 +399,97 @@
       VLT:  { label: 'Paranal — VLT (2635 m)',          lat: -24.628, lon:  -70.404, utc: -4, dst: true  },
       LC:   { label: 'Las Campanas — Magellan (2380 m)',lat: -29.010, lon:  -70.692, utc: -4, dst: true  },
       LS:   { label: 'La Silla — ESO 3.6m (2400 m)',    lat: -29.258, lon:  -70.735, utc: -4, dst: true  },
+      Garching: { label: 'Garching — ESO HQ → La Silla', lat: -29.258, lon:  -70.735, utc: -4, dst: true  },
       LP:   { label: 'La Palma — GTC/WHT (2396 m)',     lat:  28.762, lon:  -17.890, utc:  0, dst: true  },
       LBT:  { label: 'Mt Graham — LBT (3221 m)',        lat:  32.702, lon: -109.889, utc: -7, dst: false },
       KP:   { label: 'Kitt Peak — Mayall 4m (2096 m)',  lat:  31.963, lon: -111.600, utc: -7, dst: false },
       SALT: { label: 'Sutherland — SALT (1798 m)',      lat: -32.376, lon:   20.811, utc:  2, dst: false },
       SSO:  { label: 'Siding Spring — AAT (1149 m)',    lat: -31.277, lon:  149.071, utc: 10, dst: true  },
     };
+    // Garching geolocation coordinates (for distance calculation)
+    const GARCHING_COORDS = { lat: 48.262, lon: 11.672 };
     window.OBS_UTC_OFFSET = OBS.OMM.utc;  // default
 
+    /* ── Geolocation: auto-detect closest observatory ── */
+    function haversineDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Earth radius in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function selectClosestObservatory(userLat, userLon) {
+      // Special case: if near Garching, select La Silla
+      const distToGarching = haversineDistance(userLat, userLon, GARCHING_COORDS.lat, GARCHING_COORDS.lon);
+      if (distToGarching < 100) { // within 100km of Garching
+        selectObservatory('LS');
+        return;
+      }
+
+      // Find closest observatory
+      let closest = null;
+      let minDist = Infinity;
+      for (const [key, obs] of Object.entries(OBS)) {
+        if (key === 'Garching') continue; // Skip Garching in distance calc
+        const dist = haversineDistance(userLat, userLon, obs.lat, obs.lon);
+        if (dist < minDist) {
+          minDist = dist;
+          closest = key;
+        }
+      }
+      if (closest) selectObservatory(closest);
+    }
+
+    function selectObservatory(key) {
+      const o = OBS[key];
+      if (!o) return;
+      document.getElementById('obs_lat').value = o.lat;
+      document.getElementById('obs_lon').value = o.lon;
+      document.getElementById('obs_name_lbl').textContent = o.label;
+      document.getElementById('obs_utc_offset').value = o.utc;
+      document.getElementById('dst_check').checked = o.dst;
+      window.OBS_UTC_OFFSET = o.utc;
+      window.OBS_LAT = o.lat;
+      window.OBS_LON = o.lon;
+      window.DST_OFFSET = o.dst ? 1 : 0;
+      document.querySelectorAll('.obs-btn').forEach(b => b.classList.remove('obs-active'));
+      const btn = document.querySelector(`[data-obs="${key}"]`);
+      if (btn) btn.classList.add('obs-active');
+      _compute_and_show_telluric_standalone();
+      // Re-render plots if a result is loaded
+      if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.rerenderPlots) {
+        window.CONSTFINDER_BOOT.rerenderPlots();
+      }
+      if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.computeTelluric) {
+        window.CONSTFINDER_BOOT.computeTelluric();
+      }
+    }
+
+    function tryGeolocation() {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          selectClosestObservatory(position.coords.latitude, position.coords.longitude);
+        },
+        (error) => {
+          // Silently fail - user keeps default observatory
+          console.log('Geolocation not available:', error.message);
+        },
+        { timeout: 5000, maximumAge: 300000 } // 5s timeout, 5min cache
+      );
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
+      // Try geolocation on load
+      tryGeolocation();
       document.querySelectorAll('.obs-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
           const key = btn.getAttribute('data-obs');
-          const o = OBS[key];
-          if (!o) return;
-          document.getElementById('obs_lat').value = o.lat;
-          document.getElementById('obs_lon').value = o.lon;
-          document.getElementById('obs_name_lbl').textContent = o.label;
-          document.querySelectorAll('.obs-btn').forEach(b => b.classList.remove('obs-active'));
-          btn.classList.add('obs-active');
-          window.OBS_LAT = o.lat;
-          window.OBS_LON = o.lon;
-          window.OBS_UTC_OFFSET = o.utc;
-          document.getElementById("dst_check").checked = false;
-          window.DST_OFFSET = 0;
-          /* re-render plots if a result is loaded */
-          if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.rerenderPlots) {
-            window.CONSTFINDER_BOOT.rerenderPlots();
-          }
-          /* compute telluric recommendations for new observatory */
-          if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.computeTelluric) {
-            window.CONSTFINDER_BOOT.computeTelluric();
-          }
+          selectObservatory(key);
         });
       });
       /* Sync input changes → OBS_LAT/OBS_LON and clear active button */
