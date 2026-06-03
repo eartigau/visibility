@@ -738,22 +738,30 @@
         return `${hh.toString().padStart(2,'0')}:${mm.toString().padStart(2,'0')}`;
       };
       
-      // Create hover text with date and local time
-      const hoverText = hours.map((h, i) => {
-        const localH = localHours[i];
-        const am_val = airmassValues[i];
-        if (am_val === null) return '';
-        return `${dateStr}<br>Local: ${fmtTime(localH)}<br>UTC: ${fmtTime(h)}<br>Airmass: ${am_val.toFixed(2)}`;
+      // Create array of {time, airmass, utcHour} objects, filter nulls, and sort by time
+      const dataPoints = hours.map((h, i) => ({
+        localTime: localHours[i],
+        airmass: airmassValues[i],
+        utcHour: h
+      }))
+      .filter(d => d.airmass !== null)  // Remove null airmass values
+      .sort((a, b) => a.localTime - b.localTime);  // Sort by local time
+      
+      // Extract sorted arrays for plotting
+      const sortedLocalTimes = dataPoints.map(d => d.localTime);
+      const sortedAirmass = dataPoints.map(d => d.airmass);
+      const sortedHoverText = dataPoints.map(d => {
+        return `${dateStr}<br>Local: ${fmtTime(d.localTime)}<br>UTC: ${fmtTime(d.utcHour)}<br>Airmass: ${d.airmass.toFixed(2)}`;
       });
       
       const traces = [
         {
-          x: localHours,
-          y: airmassValues,
+          x: sortedLocalTimes,
+          y: sortedAirmass,
           mode: 'lines',
           type: 'scatter',
           line: { color: '#4a9eff', width: 2.5 },
-          hovertext: hoverText,
+          hovertext: sortedHoverText,
           hoverinfo: 'text',
           showlegend: false
         }
