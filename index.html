@@ -450,7 +450,6 @@
       document.getElementById('obs_lat').value = o.lat;
       document.getElementById('obs_lon').value = o.lon;
       document.getElementById('obs_name_lbl').textContent = o.label;
-      document.getElementById('obs_utc_offset').value = o.utc;
       document.getElementById('dst_check').checked = o.dst;
       window.OBS_UTC_OFFSET = o.utc;
       window.OBS_LAT = o.lat;
@@ -468,6 +467,8 @@
         window.CONSTFINDER_BOOT.computeTelluric();
       }
     }
+    // Expose for testing/debugging
+    window.selectObservatory = selectObservatory;
 
     function tryGeolocation() {
       if (!navigator.geolocation) return;
