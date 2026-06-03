@@ -452,17 +452,19 @@
       }
 
       if (zone === 'AU') {
-        // 1st Sunday October to 1st Sunday April (next year)
-        const start = getNthWeekdayOfMonth(year, 9, 0, 1);  // October, Sunday, 1st
-        const end = getNthWeekdayOfMonth(year + 1, 3, 0, 1); // April next year, Sunday, 1st
-        return current >= start || current < end;
+        // 1st Sunday October to 1st Sunday April (Southern Hemisphere)
+        const startThisYear = getNthWeekdayOfMonth(year, 9, 0, 1);  // October this year
+        const endThisYear = getNthWeekdayOfMonth(year, 3, 0, 1);    // April this year
+        // DST active if before April OR after October
+        return current < endThisYear || current >= startThisYear;
       }
 
       if (zone === 'CL') {
-        // Chile: approximate 1st Saturday September to 1st Saturday April
-        const start = getNthWeekdayOfMonth(year, 8, 6, 1);  // September, Saturday, 1st
-        const end = getNthWeekdayOfMonth(year + 1, 3, 6, 1); // April next year, Saturday, 1st
-        return current >= start || current < end;
+        // Chile: approximate 1st Saturday September to 1st Saturday April (Southern Hemisphere)
+        const startThisYear = getNthWeekdayOfMonth(year, 8, 6, 1);  // September this year
+        const endThisYear = getNthWeekdayOfMonth(year, 3, 6, 1);    // April this year
+        // DST active if before April OR after September
+        return current < endThisYear || current >= startThisYear;
       }
 
       return false;
