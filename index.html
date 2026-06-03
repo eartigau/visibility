@@ -1994,8 +1994,9 @@ def _compute_telluric_recs(doy, lat_deg, lon_deg, utc_offset, sunset_utc, sunris
         if stars_am:
             high_star, high_am = min(stars_am, key=lambda x: x[1])
         
-        # Find best low star (airmass 1.8-2.5, closest to 1.8)
-        low_candidates = [(name, am) for name, am in stars_am if 1.8 <= am <= 2.5]
+        # Find best low star (airmass 1.7-2.5, closest to 1.8)
+        # Allow slightly below 1.8 (down to 1.7) but prefer closest to 1.8
+        low_candidates = [(name, am) for name, am in stars_am if 1.7 <= am <= 2.5]
         low_star, low_am = None, None
         if low_candidates:
             low_star, low_am = min(low_candidates, key=lambda x: abs(x[1] - 1.8))
