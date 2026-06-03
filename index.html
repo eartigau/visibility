@@ -220,6 +220,12 @@
       </div>
     </div>
 
+    <!-- Telluric star recommendations (independent of target star) -->
+    <div class="plot-card" id="telluric_card" style="display:none;">
+      <div class="plot-title" id="t_telluric_title">Telluric Star Recommendations</div>
+      <div id="telluric_table"></div>
+    </div>
+
     <div id="plot_area">
       <div class="plot-card">
         <div class="plot-title" id="t_am_title">Airmass — UTC time × day of year</div>
@@ -228,10 +234,6 @@
       <div class="plot-card">
         <div class="plot-title" id="t_am_day_title">Airmass for selected night</div>
         <div id="airmass_day_plot"></div>
-      </div>
-      <div class="plot-card" id="telluric_card" style="display:none;">
-        <div class="plot-title" id="t_telluric_title">Telluric Star Recommendations</div>
-        <div id="telluric_table"></div>
       </div>
       <div class="plot-card">
         <div class="plot-title" id="t_bary_title">Barycentric velocity (Earth orbital component only)</div>
