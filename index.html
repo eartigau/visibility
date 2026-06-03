@@ -512,6 +512,16 @@
       const localSuffix = dstActive ? (LANG === 'fr' ? ' (été)' : ' (summer)') : '';
       const localTitle = ((STRINGS[LANG] || STRINGS.en).localTLabel || 'Local') + localSuffix;
 
+      // Helper to format date from DOY
+      const year = new Date().getFullYear();
+      const months = LANG === 'fr' 
+        ? ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'aoû', 'sep', 'oct', 'nov', 'déc']
+        : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const getDayMonth = (doy) => {
+        const date = new Date(year, 0, doy);
+        return `${date.getDate()} ${months[date.getMonth()]}`;
+      };
+
       const traces = [
         // Heatmap -- only airmass 1-2.5 coloured; null cells are transparent
         // Plotted against yaxis2 (UTC on right) since data is in UTC hours
@@ -521,10 +531,10 @@
             tickvals:[1,1.5,2,2.5], ticktext:['1.0','1.5','2.0','2.5'],
             tickfont:{color:'#7090b8',size:9}, thickness:12, len:0.55, y:0.5, x:1.12 },
           hoverongaps:false,
-          hovertemplate:'DOY %{x}, %{customdata:.2f}h UTC -- airmass %{z:.2f}<extra></extra>',
+          hovertemplate:'%{customdata[1]} (DOY %{x}), %{customdata[0]:.2f}h UTC -- airmass %{z:.2f}<extra></extra>',
           customdata: newHours.map(h => {
             const utcHour = ((h % 24) + 24) % 24;
-            return am.doys.map(() => utcHour);
+            return am.doys.map(doy => [utcHour, getDayMonth(doy)]);
           }) },
         // Today marker (spans both axes)
         { x:[cd,cd], y:[obsYMin,obsYMax], yaxis:'y2', mode:'lines', type:'scatter',
