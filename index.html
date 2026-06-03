@@ -252,6 +252,7 @@
         latLbl:      'Latitude (°N)',
         lonLbl:      'Longitude (°E)',
         amTitle:     'Airmass — UTC time × day of year',
+        amDayTitle:  'Airmass for selected night',
         baryTitle:   'Barycentric velocity (Earth orbital component only)',
         computing:   'Computing airmass & barycentric corrections…',
       },
@@ -271,6 +272,7 @@
         latLbl:      'Latitude (°N)',
         lonLbl:      'Longitude (°E)',
         amTitle:     'Masse d\'air — heure UTC × jour de l\'année',
+        amDayTitle:  'Masse d\'air pour la nuit sélectionnée',
         baryTitle:   'Vitesse barycentrique (composante orbitale uniquement)',
         computing:   'Calcul de la masse d\'air et des corrections barycentriques…',
       },
@@ -302,6 +304,7 @@
       document.getElementById("t_lat_lbl").textContent    = s.latLbl;
       document.getElementById("t_lon_lbl").textContent    = s.lonLbl;
       document.getElementById("t_am_title").textContent    = s.amTitle;
+      document.getElementById("t_am_day_title").textContent = s.amDayTitle;
       document.getElementById("t_bary_title").textContent  = s.baryTitle;
       document.getElementById("t_dst_lbl").textContent     = s.dstLbl;
       document.getElementById("btn_en").classList.toggle("active", LANG === "en");
@@ -662,7 +665,17 @@
            align:'left', xanchor:'left', yanchor:'top'},
         ],
       };
-      Plotly.newPlot('airmass_plot', traces, layout, {displayModeBar:false, responsive:true});
+      Plotly.newPlot('airmass_plot', traces, layout, {displayModeBar:false, responsive:true})
+        .then(() => {
+          // Add click handler to select a day
+          const plotDiv = document.getElementById('airmass_plot');
+          plotDiv.on('plotly_click', (data) => {
+            if (data.points && data.points.length > 0) {
+              const doy = Math.round(data.points[0].x);
+              window.renderAirmassDay(window._airmassData, doy);
+            }
+          });
+        });
     };
 
     /* ── Single-day airmass plot ── */
@@ -683,6 +696,10 @@
         ? ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'aoû', 'sep', 'oct', 'nov', 'déc']
         : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const dateStr = `${date.getDate()} ${months[date.getMonth()]}`;
+      
+      // Update the plot title with the selected date
+      const titlePrefix = LANG === 'fr' ? 'Masse d\'air — ' : 'Airmass — ';
+      document.getElementById('t_am_day_title').textContent = titlePrefix + dateStr;
       
       // Find the data for this DOY
       const doyIdx = am.doys.indexOf(selectedDoy);
