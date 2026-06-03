@@ -718,18 +718,23 @@
       const set18 = twil.set18 ? twil.set18[doyIdx] : null;
       const rise18 = twil.rise18 ? twil.rise18[doyIdx] : null;
       
-      // Convert UTC hours to local time
+      // Convert UTC hours to local time - create continuous range 15-33 (3pm to 9am next day)
+      // For evening/night hours (15-24), keep as is; for morning hours (0-9), add 24
       const localHours = hours.map(h => {
         let local = h + utcOff;
+        // Normalize to 0-24 first
         while (local < 0) local += 24;
         while (local >= 24) local -= 24;
+        // If it's early morning (< 15), it's the next day
+        if (local < 15) local += 24;
         return local;
       });
       
-      // Format time as HH:MM
+      // Format time as HH:MM (handle hours > 24 by taking modulo)
       const fmtTime = (h) => {
-        const hh = Math.floor(h);
-        const mm = Math.floor((h - hh) * 60);
+        const hMod = ((h % 24) + 24) % 24;
+        const hh = Math.floor(hMod);
+        const mm = Math.floor((hMod - hh) * 60);
         return `${hh.toString().padStart(2,'0')}:${mm.toString().padStart(2,'0')}`;
       };
       
@@ -754,21 +759,29 @@
         }
       ];
       
-      // Add twilight markers
+      // Add twilight markers - convert to continuous local time range [15, 33]
       const shapes = [];
       const annotations = [];
       
+      const twilToLocal = (utcH) => {
+        if (utcH === null) return null;
+        let local = utcH + utcOff;
+        while (local < 0) local += 24;
+        while (local >= 24) local -= 24;
+        if (local < 15) local += 24;  // Morning hours are next day
+        return local;
+      };
+      
       // Sunset/sunrise (0°)
-      if (set0 !== null) {
-        const localSet0 = ((set0 + utcOff) % 24 + 24) % 24;
+      const localSet0 = twilToLocal(set0);
+      const localRise0 = twilToLocal(rise0);
+      if (localSet0 !== null) {
         shapes.push({
           type: 'line', x0: localSet0, x1: localSet0, y0: 1.0, y1: 2.5,
           line: { color: 'rgba(255,255,255,0.6)', width: 1.5, dash: 'dot' }
         });
       }
-      if (rise0 !== null) {
-        let localRise0 = ((rise0 + utcOff) % 24 + 24) % 24;
-        if (localRise0 < 12) localRise0 += 24;  // Next morning
+      if (localRise0 !== null) {
         shapes.push({
           type: 'line', x0: localRise0, x1: localRise0, y0: 1.0, y1: 2.5,
           line: { color: 'rgba(255,255,255,0.6)', width: 1.5, dash: 'dot' }
@@ -776,16 +789,15 @@
       }
       
       // Nautical twilight (-12°)
-      if (set12 !== null) {
-        const localSet12 = ((set12 + utcOff) % 24 + 24) % 24;
+      const localSet12 = twilToLocal(set12);
+      const localRise12 = twilToLocal(rise12);
+      if (localSet12 !== null) {
         shapes.push({
           type: 'line', x0: localSet12, x1: localSet12, y0: 1.0, y1: 2.5,
           line: { color: 'rgba(120,195,255,0.7)', width: 1.5, dash: 'dash' }
         });
       }
-      if (rise12 !== null) {
-        let localRise12 = ((rise12 + utcOff) % 24 + 24) % 24;
-        if (localRise12 < 12) localRise12 += 24;
+      if (localRise12 !== null) {
         shapes.push({
           type: 'line', x0: localRise12, x1: localRise12, y0: 1.0, y1: 2.5,
           line: { color: 'rgba(120,195,255,0.7)', width: 1.5, dash: 'dash' }
@@ -793,16 +805,15 @@
       }
       
       // Astronomical twilight (-18°)
-      if (set18 !== null) {
-        const localSet18 = ((set18 + utcOff) % 24 + 24) % 24;
+      const localSet18 = twilToLocal(set18);
+      const localRise18 = twilToLocal(rise18);
+      if (localSet18 !== null) {
         shapes.push({
           type: 'line', x0: localSet18, x1: localSet18, y0: 1.0, y1: 2.5,
           line: { color: 'rgba(80,120,220,0.5)', width: 1.2 }
         });
       }
-      if (rise18 !== null) {
-        let localRise18 = ((rise18 + utcOff) % 24 + 24) % 24;
-        if (localRise18 < 12) localRise18 += 24;
+      if (localRise18 !== null) {
         shapes.push({
           type: 'line', x0: localRise18, x1: localRise18, y0: 1.0, y1: 2.5,
           line: { color: 'rgba(80,120,220,0.5)', width: 1.2 }
@@ -819,7 +830,10 @@
           title: LANG === 'fr' ? 'Heure locale' : 'Local time',
           gridcolor: 'rgba(255,255,255,0.08)',
           showline: false,
-          range: [15, 33]  // 3pm to 9am next day
+          range: [15, 33],  // 3pm to 9am next day (continuous range)
+          tickmode: 'array',
+          tickvals: [15, 18, 21, 24, 27, 30, 33],
+          ticktext: ['15:00', '18:00', '21:00', '00:00', '03:00', '06:00', '09:00']
         },
         yaxis: {
           title: 'Airmass',
@@ -829,16 +843,7 @@
           autorange: false
         },
         shapes,
-        showlegend: false,
-        annotations: [
-          {
-            x: 0.01, y: 0.98, xref: 'paper', yref: 'paper',
-            text: `<b>${dateStr}</b>`,
-            showarrow: false,
-            font: { color: 'rgba(200,220,255,0.85)', size: 11 },
-            align: 'left', xanchor: 'left', yanchor: 'top'
-          }
-        ]
+        showlegend: false
       };
       
       Plotly.newPlot('airmass_day_plot', traces, layout, { displayModeBar: false, responsive: true });
