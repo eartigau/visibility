@@ -392,21 +392,81 @@
     });
     /* ── Observatory presets ── */
     const OBS = {
-      OMM:  { label: 'Mont-Mégantic (1111 m)',          lat:  45.455, lon:  -71.153, utc: -5, dst: true  },
-      MK:   { label: 'Mauna Kea — Keck/Gemini N (4205 m)', lat:  19.821, lon: -155.468, utc:-10, dst: false },
-      GemS: { label: 'Cerro Pachón — Gemini S (2722 m)',lat: -30.241, lon:  -70.737, utc: -4, dst: true  },
-      VLT:  { label: 'Paranal — VLT (2635 m)',          lat: -24.628, lon:  -70.404, utc: -4, dst: true  },
-      LC:   { label: 'Las Campanas — Magellan (2380 m)',lat: -29.010, lon:  -70.692, utc: -4, dst: true  },
-      LS:   { label: 'La Silla — ESO 3.6m (2400 m)',    lat: -29.258, lon:  -70.735, utc: -4, dst: true  },
-      LP:   { label: 'La Palma — GTC/WHT (2396 m)',     lat:  28.762, lon:  -17.890, utc:  0, dst: true  },
-      LBT:  { label: 'Mt Graham — LBT (3221 m)',        lat:  32.702, lon: -109.889, utc: -7, dst: false },
-      KP:   { label: 'Kitt Peak — Mayall 4m (2096 m)',  lat:  31.963, lon: -111.600, utc: -7, dst: false },
-      SALT: { label: 'Sutherland — SALT (1798 m)',      lat: -32.376, lon:   20.811, utc:  2, dst: false },
-      SSO:  { label: 'Siding Spring — AAT (1149 m)',    lat: -31.277, lon:  149.071, utc: 10, dst: true  },
+      OMM:  { label: 'Mont-Mégantic (1111 m)',          lat:  45.455, lon:  -71.153, utc: -5, dst: true, dstZone: 'US' },
+      MK:   { label: 'Mauna Kea — Keck/Gemini N (4205 m)', lat:  19.821, lon: -155.468, utc:-10, dst: false, dstZone: 'none' },
+      GemS: { label: 'Cerro Pachón — Gemini S (2722 m)',lat: -30.241, lon:  -70.737, utc: -4, dst: true, dstZone: 'CL' },
+      VLT:  { label: 'Paranal — VLT (2635 m)',          lat: -24.628, lon:  -70.404, utc: -4, dst: true, dstZone: 'CL' },
+      LC:   { label: 'Las Campanas — Magellan (2380 m)',lat: -29.010, lon:  -70.692, utc: -4, dst: true, dstZone: 'CL' },
+      LS:   { label: 'La Silla — ESO 3.6m (2400 m)',    lat: -29.258, lon:  -70.735, utc: -4, dst: true, dstZone: 'CL' },
+      LP:   { label: 'La Palma — GTC/WHT (2396 m)',     lat:  28.762, lon:  -17.890, utc:  0, dst: true, dstZone: 'EU' },
+      LBT:  { label: 'Mt Graham — LBT (3221 m)',        lat:  32.702, lon: -109.889, utc: -7, dst: false, dstZone: 'none' },
+      KP:   { label: 'Kitt Peak — Mayall 4m (2096 m)',  lat:  31.963, lon: -111.600, utc: -7, dst: false, dstZone: 'none' },
+      SALT: { label: 'Sutherland — SALT (1798 m)',      lat: -32.376, lon:   20.811, utc:  2, dst: false, dstZone: 'none' },
+      SSO:  { label: 'Siding Spring — AAT (1149 m)',    lat: -31.277, lon:  149.071, utc: 10, dst: true, dstZone: 'AU' },
     };
     // Garching geolocation coordinates (for distance calculation)
     const GARCHING_COORDS = { lat: 48.262, lon: 11.672 };
     window.OBS_UTC_OFFSET = OBS.OMM.utc;  // default
+
+    /* ── DST detection ── */
+    // Get nth occurrence of a weekday in a month (e.g., 2nd Sunday of March)
+    function getNthWeekdayOfMonth(year, month, weekday, n) {
+      const first = new Date(year, month, 1);
+      const firstWeekday = first.getDay();
+      const offset = (weekday - firstWeekday + 7) % 7;
+      const day = 1 + offset + (n - 1) * 7;
+      return new Date(year, month, day);
+    }
+
+    // Get last occurrence of a weekday in a month
+    function getLastWeekdayOfMonth(year, month, weekday) {
+      const last = new Date(year, month + 1, 0); // last day of month
+      const lastDay = last.getDate();
+      const lastWeekday = last.getDay();
+      const offset = (lastWeekday - weekday + 7) % 7;
+      const day = lastDay - offset;
+      return new Date(year, month, day);
+    }
+
+    // Check if a date is in DST for a given zone
+    function isDSTActive(date, zone) {
+      if (zone === 'none') return false;
+      
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      const day = date.getDate();
+      const current = new Date(year, month, day);
+
+      if (zone === 'US') {
+        // 2nd Sunday March to 1st Sunday November
+        const start = getNthWeekdayOfMonth(year, 2, 0, 2); // March (month 2), Sunday (0), 2nd
+        const end = getNthWeekdayOfMonth(year, 10, 0, 1);  // November (month 10), Sunday (0), 1st
+        return current >= start && current < end;
+      }
+
+      if (zone === 'EU') {
+        // Last Sunday March to last Sunday October
+        const start = getLastWeekdayOfMonth(year, 2, 0);  // March, Sunday
+        const end = getLastWeekdayOfMonth(year, 9, 0);    // October, Sunday
+        return current >= start && current < end;
+      }
+
+      if (zone === 'AU') {
+        // 1st Sunday October to 1st Sunday April (next year)
+        const start = getNthWeekdayOfMonth(year, 9, 0, 1);  // October, Sunday, 1st
+        const end = getNthWeekdayOfMonth(year + 1, 3, 0, 1); // April next year, Sunday, 1st
+        return current >= start || current < end;
+      }
+
+      if (zone === 'CL') {
+        // Chile: approximate 1st Saturday September to 1st Saturday April
+        const start = getNthWeekdayOfMonth(year, 8, 6, 1);  // September, Saturday, 1st
+        const end = getNthWeekdayOfMonth(year + 1, 3, 6, 1); // April next year, Saturday, 1st
+        return current >= start || current < end;
+      }
+
+      return false;
+    }
 
     /* ── Geolocation: auto-detect closest observatory ── */
     function haversineDistance(lat1, lon1, lat2, lon2) {
@@ -445,14 +505,19 @@
     function selectObservatory(key) {
       const o = OBS[key];
       if (!o) return;
+      
+      // Auto-detect DST for this observatory
+      const now = new Date();
+      const dstActive = isDSTActive(now, o.dstZone);
+      
       document.getElementById('obs_lat').value = o.lat;
       document.getElementById('obs_lon').value = o.lon;
       document.getElementById('obs_name_lbl').textContent = o.label;
-      document.getElementById('dst_check').checked = o.dst;
+      document.getElementById('dst_check').checked = dstActive;
       window.OBS_UTC_OFFSET = o.utc;
       window.OBS_LAT = o.lat;
       window.OBS_LON = o.lon;
-      window.DST_OFFSET = o.dst ? 1 : 0;
+      window.DST_OFFSET = dstActive ? 1 : 0;
       document.querySelectorAll('.obs-btn').forEach(b => b.classList.remove('obs-active'));
       const btn = document.querySelector(`[data-obs="${key}"]`);
       if (btn) btn.classList.add('obs-active');
@@ -513,10 +578,13 @@
         /* compute telluric recommendations for new DST setting */
         if (window.CONSTFINDER_BOOT && window.CONSTFINDER_BOOT.computeTelluric) window.CONSTFINDER_BOOT.computeTelluric();
       });
-      /* Default */
+      /* Default - auto-detect DST for OMM */
+      const now = new Date();
+      const defaultDST = isDSTActive(now, OBS.OMM.dstZone);
+      document.getElementById('dst_check').checked = defaultDST;
       window.OBS_LAT = OBS.OMM.lat;
       window.OBS_LON = OBS.OMM.lon;
-      window.DST_OFFSET = 0;
+      window.DST_OFFSET = defaultDST ? 1 : 0;
     });
 
     /* ── Month tick helpers ── */
