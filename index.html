@@ -217,6 +217,10 @@
         <div id="airmass_plot"></div>
       </div>
       <div class="plot-card">
+        <div class="plot-title" id="t_am_day_title">Airmass for selected night</div>
+        <div id="airmass_day_plot"></div>
+      </div>
+      <div class="plot-card">
         <div class="plot-title" id="t_bary_title">Barycentric velocity (Earth orbital component only)</div>
         <div id="bary_plot"></div>
       </div>
@@ -441,6 +445,9 @@
 
     /* ── Airmass plot ── */
     window.renderAirmassPlot = function (am) {
+      // Store for click handler
+      window._airmassData = am;
+      
       // zmin=1, zmax=2.5 — only airmass cells are coloured; NaN cells are transparent
       const colorscale = [
         [0.000, '#1a50c8'],  // am=1.0: excellent (deep blue)
@@ -884,6 +891,7 @@
       const d = JSON.parse(jsonStr);
       document.getElementById('plot_area').style.display = 'block';
       window.renderAirmassPlot(d.airmass);
+      window.renderAirmassDay(d.airmass, curDoy());  // Show today by default
       window.renderBaryPlot(d.bary);
     };
 
