@@ -34,7 +34,11 @@
     @keyframes drift { 0%,100%{transform:translate(0,0) scale(1);} 33%{transform:translate(20px,-15px) scale(1.04);} 66%{transform:translate(-15px,10px) scale(.97);} }
     .wrap { position:relative; z-index:1; width:min(780px,94%); margin:0 auto; padding:3rem 0 4rem; }
     /* ── language toggle ── */
-    .topbar { display:flex; justify-content:flex-end; margin-bottom:1.2rem; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem; }
+    .home-link { display:inline-flex; align-items:center; gap:5px; font-size:.8rem; font-weight:700; letter-spacing:.06em; color:var(--ink-dim); text-decoration:none; padding:.3rem .85rem; border-radius:999px; border:1px solid var(--border); background:rgba(10,20,50,.7); backdrop-filter:blur(6px); transition:color .15s; font-family:"Space Grotesk",sans-serif; }
+    .home-link:hover { color:var(--accent); }
+    html[lang="en"] .home-link-fr { display:none; }
+    html[lang="fr"] .home-link-en { display:none; }
     .lang-toggle { display:inline-flex; align-items:center; gap:.25rem; padding:.2rem; border:1px solid var(--border); border-radius:999px; background:rgba(10,20,50,.7); backdrop-filter:blur(6px); }
     .lang-toggle button { padding:.3rem .7rem; border-radius:999px; border:none; background:transparent; color:var(--ink-dim); font-size:.8rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; transition:background .15s,color .15s; font-family:"Space Grotesk",sans-serif; }
     .lang-toggle button.active { background:linear-gradient(135deg,#2a60d0,#5a9aff); color:#fff; }
@@ -149,6 +153,8 @@
 
   <div class="wrap">
     <div class="topbar">
+      <a href="https://eartigau.github.io/index_en.html" class="home-link home-link-en">← Home</a>
+      <a href="https://eartigau.github.io/index_fr.html" class="home-link home-link-fr">← Accueil</a>
       <div class="lang-toggle" aria-label="Language / Langue">
         <button id="btn_en" type="button">EN</button>
         <button id="btn_fr" type="button">FR</button>
