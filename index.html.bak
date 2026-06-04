@@ -220,6 +220,12 @@
       </div>
     </div>
 
+    <!-- Telluric star recommendations (independent of target star) -->
+    <div class="plot-card" id="telluric_card" style="display:none;">
+      <div class="plot-title" id="t_telluric_title">Telluric Star Recommendations</div>
+      <div id="telluric_table"></div>
+    </div>
+
     <div id="plot_area">
       <div class="plot-card">
         <div class="plot-title" id="t_am_title">Airmass — UTC time × day of year</div>
@@ -233,12 +239,6 @@
         <div class="plot-title" id="t_bary_title">Barycentric velocity (Earth orbital component only)</div>
         <div id="bary_plot"></div>
       </div>
-    </div>
-
-    <!-- Telluric star recommendations (independent of target star) -->
-    <div class="plot-card" id="telluric_card" style="display:none;">
-      <div class="plot-title" id="t_telluric_title">Telluric Star Recommendations</div>
-      <div id="telluric_table"></div>
     </div>
 
     <div class="footer" id="t_footer">
@@ -1885,6 +1885,7 @@ async def _do_lookup(event=None):
         btn.disabled = False; inp.disabled = False
         return
     # ── name lookup via SIMBAD ──
+    _set_status(_tr(f'Searching SIMBAD for “{target}”…', f'Recherche de « {target} » dans SIMBAD…'), "ok", loading=True)
     _set_result("")
     _last_result = None
     btn.disabled = True; inp.disabled = True
@@ -1899,6 +1900,7 @@ async def _do_lookup(event=None):
             _set_status(_tr(f'Coordinates not found for “{result.get("main_id","?")}”.',
                            f'Coordonnées introuvables pour « {result.get("main_id","?")} ».'), "error"); return
         _last_result = result
+        _save_cached_result(target, result)  # Save to cache
         _render_result(result)
         lat = float(getattr(window, "OBS_LAT", 45.455))
         lon = float(getattr(window, "OBS_LON", -71.153))
