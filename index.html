@@ -35,10 +35,8 @@
     .wrap { position:relative; z-index:1; width:min(780px,94%); margin:0 auto; padding:3rem 0 4rem; }
     /* ── language toggle ── */
     .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem; }
-    .home-link { display:inline-flex; align-items:center; gap:5px; font-size:.8rem; font-weight:700; letter-spacing:.06em; color:var(--ink-dim); text-decoration:none; padding:.3rem .85rem; border-radius:999px; border:1px solid var(--border); background:rgba(10,20,50,.7); backdrop-filter:blur(6px); transition:color .15s; font-family:"Space Grotesk",sans-serif; }
-    .home-link:hover { color:var(--accent); }
-    html[lang="en"] .home-link-fr { display:none; }
-    html[lang="fr"] .home-link-en { display:none; }
+    .home-link { display:inline-flex; align-items:center; padding:.35rem .8rem; border-radius:999px; border:1px solid var(--border); background:rgba(10,20,50,.7); color:var(--accent-2); font-size:.8rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; text-decoration:none; transition:background .15s,border-color .15s,color .15s; }
+    .home-link:hover { background:rgba(40,70,140,.45); border-color:rgba(100,160,255,.5); color:#fff; }
     .lang-toggle { display:inline-flex; align-items:center; gap:.25rem; padding:.2rem; border:1px solid var(--border); border-radius:999px; background:rgba(10,20,50,.7); backdrop-filter:blur(6px); }
     .lang-toggle button { padding:.3rem .7rem; border-radius:999px; border:none; background:transparent; color:var(--ink-dim); font-size:.8rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; transition:background .15s,color .15s; font-family:"Space Grotesk",sans-serif; }
     .lang-toggle button.active { background:linear-gradient(135deg,#2a60d0,#5a9aff); color:#fff; }
@@ -115,7 +113,7 @@
     .obs-inputs { display:flex; flex-wrap:wrap; gap:.7rem; align-items:flex-end; }
     .obs-field { display:flex; flex-direction:column; gap:.22rem; }
     .obs-field label { font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); }
-    .obs-field input[type=number] { background:rgba(10,20,50,.8); border:1px solid rgba(100,140,255,.25); border-radius:8px; padding:.38rem .55rem; font-size:.88rem; color:var(--ink); width:115px; font-family:"Space Grotesk",sans-serif; outline:none; -moz-appearance:textfield; }
+    .obs-field input[type=number] { background:rgba(10,20,50,.8); border:1px solid rgba(100,140,255,.25); border-radius:8px; padding:.38rem .55rem; font-size:.88rem; color:var(--ink); width:115px; font-family:"Space Grotesk",sans-serif; outline:none; appearance:textfield; -moz-appearance:textfield; }
     .obs-field input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
     .obs-field input:focus { border-color:rgba(100,160,255,.55); }
     .obs-name { font-size:.82rem; color:var(--gold); font-style:italic; padding-bottom:.2rem; }
@@ -153,8 +151,7 @@
 
   <div class="wrap">
     <div class="topbar">
-      <a href="https://eartigau.github.io/index_en.html" class="home-link home-link-en">← Home</a>
-      <a href="https://eartigau.github.io/index_fr.html" class="home-link home-link-fr">← Accueil</a>
+      <a class="home-link" id="home_link" href="https://eartigau.github.io/" target="_blank" rel="noopener noreferrer">Home</a>
       <div class="lang-toggle" aria-label="Language / Langue">
         <button id="btn_en" type="button">EN</button>
         <button id="btn_fr" type="button">FR</button>
@@ -262,6 +259,7 @@
         tagline:     "Plan stellar observations — airmass, barycentric velocity, twilight",
         placeholder: "Star name, or: 101.287 −16.716 / 06:44:59 −16:42:58",
         btn:         "Fetch object coordinates",
+        home:        "Home",
         try:         "Try:",
         footer:      'Star data via <a href="https://simbad.cds.unistra.fr/" target="_blank">SIMBAD</a> (CDS, Strasbourg) &nbsp;·&nbsp; Constellation boundaries: IAU / Roman (1987) / Delporte (1930)',
         coordHint:   'Or enter coordinates: <code>101.287 −16.716</code> (decimal °) &nbsp;·&nbsp; <code>06:44:59 −16:42:58</code> (sexagesimal) &nbsp;·&nbsp; <code>06h44m59s −16d42m58s</code> (h m s / d m s)',
@@ -282,6 +280,7 @@
         tagline:     "Planifiez vos observations — masse d'air, vitesse barycentrique, crépuscule",
         placeholder: "Nom d'étoile, ou : 101.287 −16.716 / 06:44:59 −16:42:58",
         btn:         "Récupérer coordonnées",
+        home:        "Accueil",
         try:         "Essayez :",
         footer:      'Données via <a href="https://simbad.cds.unistra.fr/" target="_blank">SIMBAD</a> (CDS, Strasbourg) &nbsp;·&nbsp; Frontières IAU / Roman (1987) / Delporte (1930)',
         coordHint:   'Ou entrez des coordonnées : <code>101.287 −16.716</code> (degrés décimaux) &nbsp;·&nbsp; <code>06:44:59 −16:42:58</code> (sexagésimal) &nbsp;·&nbsp; <code>06h44m59s −16d42m58s</code> (h m s / d m s)',
@@ -318,6 +317,7 @@
       document.getElementById("t_tagline").textContent  = s.tagline;
       document.getElementById("star_name").placeholder  = s.placeholder;
       document.getElementById("find_btn").textContent   = s.btn;
+      document.getElementById("home_link").textContent  = s.home;
       document.getElementById("t_try").textContent      = s.try;
       document.getElementById("t_footer").innerHTML     = s.footer;
       document.getElementById("t_coord_hint").innerHTML = s.coordHint;
@@ -1121,8 +1121,9 @@
         : (isDst ? 'Local time (summer)' : 'Local time');
       const utcLabel = LANG === 'fr' ? 'Heure UTC' : 'UTC';
       const sunAltLabel = LANG === 'fr' ? 'Alt. Soleil' : 'Sun Alt';
-      const highLabel = LANG === 'fr' ? 'Haute (basse MA)' : 'High (Low AM)';
-      const lowLabel = LANG === 'fr' ? 'Basse (haute MA)' : 'Low (High AM)';
+      const highLabel = LANG === 'fr' ? 'Zénith' : 'Zenith';
+      const lowLabel = LANG === 'fr' ? 'Horizon' : 'Horizon';
+      const ghHoverPrefix = LANG === 'fr' ? 'Magnitudes' : 'Magnitudes';
       
       let html = '<table class="telluric-table"><thead><tr>';
       html += `<th>${localLabel}</th>`;
@@ -1143,14 +1144,20 @@
         const lowAM = (row.low_am && row.low_am <= 2.5) ? row.low_am.toFixed(2) : '—';
         const highStar = (row.high_star && row.high_am && row.high_am <= 2.5) ? row.high_star : '—';
         const lowStar = (row.low_star && row.low_am && row.low_am <= 2.5) ? row.low_star : '—';
+        const highG = (row.high_star && row.high_am && row.high_am <= 2.5 && row.high_g !== null && row.high_g !== undefined) ? row.high_g.toFixed(2) : '—';
+        const highH = (row.high_star && row.high_am && row.high_am <= 2.5 && row.high_h !== null && row.high_h !== undefined) ? row.high_h.toFixed(2) : '—';
+        const lowG = (row.low_star && row.low_am && row.low_am <= 2.5 && row.low_g !== null && row.low_g !== undefined) ? row.low_g.toFixed(2) : '—';
+        const lowH = (row.low_star && row.low_am && row.low_am <= 2.5 && row.low_h !== null && row.low_h !== undefined) ? row.low_h.toFixed(2) : '—';
+        const highTitle = (highStar !== '—') ? `${ghHoverPrefix}: G=${highG}, H=${highH}` : '';
+        const lowTitle = (lowStar !== '—') ? `${ghHoverPrefix}: G=${lowG}, H=${lowH}` : '';
         
         html += '<tr>';
         html += `<td class="time-col">${row.local_time || '—'}</td>`;
         html += `<td class="time-col">${row.utc_time || '—'}</td>`;
         html += `<td class="am-col">${row.sun_alt !== undefined ? row.sun_alt.toFixed(1) + '°' : '—'}</td>`;
-        html += `<td class="star-col ${highClass}">${highStar}</td>`;
+        html += `<td class="star-col ${highClass}" title="${highTitle}">${highStar}</td>`;
         html += `<td class="am-col ${highClass}">${highAM}</td>`;
-        html += `<td class="star-col ${lowClass}">${lowStar}</td>`;
+        html += `<td class="star-col ${lowClass}" title="${lowTitle}">${lowStar}</td>`;
         html += `<td class="am-col ${lowClass}">${lowAM}</td>`;
         html += '</tr>';
       });
@@ -2102,21 +2109,32 @@ def _am_pure(ra_deg, dec_deg, lat_deg, lon_deg):
 
 # Telluric stars from YAML (coordinates in decimal degrees J2000)
 _TELLURIC_STARS = {
-    "HR875": {"ra": 44.15593, "dec": -3.71232},
-    "HR1903": {"ra": 84.053389, "dec": -1.201919},
-    "HR3117": {"ra": 119.19467, "dec": -52.98235},
-    "HR3131": {"ra": 119.96686, "dec": -18.39922},
-    "HR3314": {"ra": 126.41513, "dec": -3.90643},
-    "HR4023": {"ra": 153.68398, "dec": -42.12194},
-    "HR4467": {"ra": 173.94533, "dec": -63.01983},
-    "HR5107": {"ra": 203.67330, "dec": -0.59582},
-    "HR5671": {"ra": 229.72742, "dec": -68.67955},
-    "HR6743": {"ra": 271.65780, "dec": -50.09148},
-    "HR7590": {"ra": 300.14815, "dec": -72.91051},
-    "HR7830": {"ra": 307.47462, "dec": -18.58318},
-    "HR8709": {"ra": 343.66253, "dec": -15.82082},
-    "HR9098": {"ra": 0.93495, "dec": -17.33599},
-    "HR806": {"ra": 39.89734, "dec": -68.26695},
+  "HR9098": {"ra": 0.93494930, "dec": -17.33599144, "g_mag": 4.516587, "h_mag": 4.61},
+  "31Cas": {"ra": 20.17333000, "dec": 62.26972000, "g_mag": 5.318598, "h_mag": 5.332},
+  "HR806": {"ra": 39.89733837, "dec": -68.26694731, "g_mag": 4.112274, "h_mag": 4.433},
+  "HR875": {"ra": 44.15593391, "dec": -3.71232193, "g_mag": 5.137276, "h_mag": 4.98},
+  "HR 1314": {"ra": 64.17954879, "dec": 53.61180022, "g_mag": 5.169462, "h_mag": 4.947},
+  "HR1903": {"ra": 84.05338894, "dec": -1.20191914, "g_mag": None, "h_mag": 2.07},
+  "HR 2209": {"ra": 94.71157297, "dec": 69.31981424, "g_mag": 4.756203, "h_mag": 4.767},
+  "HR3117": {"ra": 119.19466706, "dec": -52.98234546, "g_mag": 3.441479, "h_mag": 3.919},
+  "HR3131": {"ra": 119.96686484, "dec": -18.39921691, "g_mag": 4.592041, "h_mag": 4.33},
+  "HR3314": {"ra": 126.41513277, "dec": -3.90642722, "g_mag": 3.902255, "h_mag": 3.92},
+  "33Lyn": {"ra": 129.33375000, "dec": 52.22139000, "g_mag": 5.742894, "h_mag": 5.647},
+  "24Lyn": {"ra": 140.21083000, "dec": 59.11528000, "g_mag": 4.914018, "h_mag": 4.685},
+  "HR4023": {"ra": 153.68398221, "dec": -42.12194258, "g_mag": 3.846665, "h_mag": 3.75},
+  "HR4467": {"ra": 173.94532538, "dec": -63.01983499, "g_mag": 3.129286, "h_mag": 3.1},
+  "HR 4687": {"ra": 184.70827162, "dec": 75.16056071, "g_mag": 5.447877, "h_mag": 5.29},
+  "82UMa": {"ra": 203.48333000, "dec": 54.99028000, "g_mag": 5.44243, "h_mag": 5.196},
+  "HR5107": {"ra": 203.67329733, "dec": -0.59581642, "g_mag": 3.373845, "h_mag": 3.05},
+  "HR5671": {"ra": 229.72742204, "dec": -68.67954667, "g_mag": 2.882312, "h_mag": 2.76},
+  "HR6025": {"ra": 241.58198655, "dec": 67.81013521, "g_mag": 5.42619, "h_mag": 5.428},
+  "HR6743": {"ra": 271.65779704, "dec": -50.09147570, "g_mag": 3.643981, "h_mag": 3.9},
+  "51Dra": {"ra": 291.86625000, "dec": 69.74111000, "g_mag": 5.394147, "h_mag": 5.446},
+  "iotCyg": {"ra": 298.42500000, "dec": 51.73028000, "g_mag": None, "h_mag": None},
+  "HR7590": {"ra": 300.14814825, "dec": -72.91050549, "g_mag": 3.963491, "h_mag": 3.762},
+  "HR7830": {"ra": 307.47462289, "dec": -18.58318352, "g_mag": 5.918725, "h_mag": 5.778},
+  "HR 8489": {"ra": 333.68483890, "dec": 42.95389967, "g_mag": 5.71013, "h_mag": 5.68},
+  "HR8709": {"ra": 343.66252607, "dec": -15.82081957, "g_mag": 3.272364, "h_mag": 3.08},
 }
 
 def _compute_telluric_recs(doy, lat_deg, lon_deg, utc_offset, sunset_utc, sunrise_utc, dst_active=False):
@@ -2164,6 +2182,8 @@ def _compute_telluric_recs(doy, lat_deg, lon_deg, utc_offset, sunset_utc, sunris
         for star_name, coords in _TELLURIC_STARS.items():
             ra_deg = coords["ra"]
             dec_deg = coords["dec"]
+            g_mag = coords.get("g_mag")
+            h_mag = coords.get("h_mag")
             dec_r = math.radians(dec_deg)
             
             # Compute LST and altitude
@@ -2177,19 +2197,27 @@ def _compute_telluric_recs(doy, lat_deg, lon_deg, utc_offset, sunset_utc, sunris
             if alt_deg > 0.5:  # Above horizon
                 am = 1.0 / math.sin(alt_rad)
                 if am <= 3.5:
-                    stars_am.append((star_name, am))
+                    stars_am.append({"name": star_name, "am": am, "g_mag": g_mag, "h_mag": h_mag})
         
         # Find best high star (minimum airmass, closest to zenith)
-        high_star, high_am = None, None
+        high_star, high_am, high_g, high_h = None, None, None, None
         if stars_am:
-            high_star, high_am = min(stars_am, key=lambda x: x[1])
+            best_high = min(stars_am, key=lambda x: x["am"])
+            high_star = best_high["name"]
+            high_am = best_high["am"]
+            high_g = best_high.get("g_mag")
+            high_h = best_high.get("h_mag")
         
         # Find best low star (airmass ≤2.5, closest to 1.8)
         # No lower limit - any star not above 2.5 is valid
-        low_candidates = [(name, am) for name, am in stars_am if am <= 2.5]
-        low_star, low_am = None, None
+        low_candidates = [item for item in stars_am if item["am"] <= 2.5]
+        low_star, low_am, low_g, low_h = None, None, None, None
         if low_candidates:
-            low_star, low_am = min(low_candidates, key=lambda x: abs(x[1] - 1.8))
+            best_low = min(low_candidates, key=lambda x: abs(x["am"] - 1.8))
+            low_star = best_low["name"]
+            low_am = best_low["am"]
+            low_g = best_low.get("g_mag")
+            low_h = best_low.get("h_mag")
         
         # Format times
         utc_h = utc_hour % 24
@@ -2204,8 +2232,12 @@ def _compute_telluric_recs(doy, lat_deg, lon_deg, utc_offset, sunset_utc, sunris
             "sun_alt": sun_alt,
             "high_star": high_star,
             "high_am": high_am,
+            "high_g": high_g,
+            "high_h": high_h,
             "low_star": low_star,
             "low_am": low_am,
+            "low_g": low_g,
+            "low_h": low_h,
             "day": doy,
             "dst_active": dst_active
         })

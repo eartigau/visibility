@@ -3,62 +3,155 @@ stars:
     ra: 0.9349492958375
     dec: -17.33599144286444
     name: HR9098
+    g_mag: 4.516587
+    h_mag: 4.61
+  31Cas:
+    ra: 20.17333
+    dec: 62.26972
+    name: 31Cas
+    g_mag: 5.318598
+    h_mag: 5.332
   HR806:
     ra: 39.89733837167
     dec: -68.26694731111
     name: HR806
+    g_mag: 4.112274
+    h_mag: 4.433
   HR875:
     ra: 44.15593390855
     dec: -3.71232192627
     name: HR875
+    g_mag: 5.137276
+    h_mag: 4.98
+  HR 1314:
+    ra: 64.17954879257
+    dec: 53.61180021655
+    name: HR 1314
+    g_mag: 5.169462
+    h_mag: 4.947
   HR1903:
     ra: 84.053388941
     dec: -1.201919136
     name: HR1903
+    h_mag: 2.07
+  HR 2209:
+    ra: 94.71157297372875
+    dec: 69.31981423597666
+    name: HR 2209
+    g_mag: 4.756203
+    h_mag: 4.767
   HR3117:
     ra: 119.19466705582
     dec: -52.98234546298
     name: HR3117
+    g_mag: 3.441479
+    h_mag: 3.919
   HR3131:
     ra: 119.96686484006
     dec: -18.39921691203
     name: HR3131
+    g_mag: 4.592041
+    h_mag: 4.33
   HR3314:
     ra: 126.41513277136585
     dec: -3.90642721868194
     name: HR3314
+    g_mag: 3.902255
+    h_mag: 3.92
+  33Lyn:
+    ra: 129.33375
+    dec: 52.22139
+    name: 33Lyn
+    g_mag: 5.742894
+    h_mag: 5.647
+  24Lyn:
+    ra: 140.21083
+    dec: 59.11528
+    name: 24Lyn
+    g_mag: 4.914018
+    h_mag: 4.685
   HR4023:
     ra: 153.68398220708
     dec: -42.12194258111
     name: HR4023
+    g_mag: 3.846665
+    h_mag: 3.75
   HR4467:
     ra: 173.94532537821
     dec: -63.01983499360999
     name: HR4467
+    g_mag: 3.129286
+    h_mag: 3.1
+  HR 4687:
+    ra: 184.70827162004997
+    dec: 75.16056071392
+    name: HR 4687
+    g_mag: 5.447877
+    h_mag: 5.29
+  82UMa:
+    ra: 203.48333
+    dec: 54.99028
+    name: 82UMa
+    g_mag: 5.44243
+    h_mag: 5.196
   HR5107:
     ra: 203.67329732802997
     dec: -0.59581641612
     name: HR5107
+    g_mag: 3.373845
+    h_mag: 3.05
   HR5671:
     ra: 229.7274220385625
     dec: -68.67954667374444
     name: HR5671
+    g_mag: 2.882312
+    h_mag: 2.76
+  HR6025:
+    ra: 241.58198655411996
+    dec: 67.81013521233
+    name: HR6025
+    g_mag: 5.42619
+    h_mag: 5.428
   HR6743:
     ra: 271.65779704083
     dec: -50.09147570083
     name: HR6743
+    g_mag: 3.643981
+    h_mag: 3.9
+  51Dra:
+    ra: 291.86625
+    dec: 69.74111
+    name: 51Dra
+    g_mag: 5.394147
+    h_mag: 5.446
+  iotCyg:
+    ra: 298.425
+    dec: 51.73028
+    name: iotCyg
   HR7590:
     ra: 300.148148245
     dec: -72.91050549417
     name: HR7590
+    g_mag: 3.963491
+    h_mag: 3.762
   HR7830:
     ra: 307.47462289485
     dec: -18.58318352159
     name: HR7830
+    g_mag: 5.918725
+    h_mag: 5.778
+  HR 8489:
+    ra: 333.68483890165
+    dec: 42.95389967483
+    name: HR 8489
+    g_mag: 5.71013
+    h_mag: 5.68
   HR8709:
     ra: 343.66252607413
     dec: -15.8208195652
     name: HR8709
+    g_mag: 3.272364
+    h_mag: 3.08
 guidelines:
   purpose: "Telluric stars should be observed in evening twilight to gather a library\
     \ \nof featureless spectra with only telluric absorption imprint.\n"
