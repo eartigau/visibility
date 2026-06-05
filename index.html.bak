@@ -242,7 +242,7 @@
     </div>
 
     <div class="footer" id="t_footer">
-      Star data via <a href="https://simbad.cds.unistra.fr/" target="_blank">SIMBAD</a>
+      Star data via <a href="https://simbad.cds.unistra.fr/">SIMBAD</a>
       (CDS, Strasbourg) &nbsp;·&nbsp; Constellation boundaries: IAU / Roman (1987) / Delporte (1930)
     </div>
   </div>
@@ -257,7 +257,7 @@
         placeholder: "Star name, or: 101.287 −16.716 / 06:44:59 −16:42:58",
         btn:         "Fetch object coordinates",
         try:         "Try:",
-        footer:      'Star data via <a href="https://simbad.cds.unistra.fr/" target="_blank">SIMBAD</a> (CDS, Strasbourg) &nbsp;·&nbsp; Constellation boundaries: IAU / Roman (1987) / Delporte (1930)',
+        footer:      'Star data via <a href="https://simbad.cds.unistra.fr/">SIMBAD</a> (CDS, Strasbourg) &nbsp;·&nbsp; Constellation boundaries: IAU / Roman (1987) / Delporte (1930)',
         coordHint:   'Or enter coordinates: <code>101.287 −16.716</code> (decimal °) &nbsp;·&nbsp; <code>06:44:59 −16:42:58</code> (sexagesimal) &nbsp;·&nbsp; <code>06h44m59s −16d42m58s</code> (h m s / d m s)',
         dstLbl:      'Daylight saving (DST +1h)',
         localTLabel: 'Local time',
@@ -277,7 +277,7 @@
         placeholder: "Nom d'étoile, ou : 101.287 −16.716 / 06:44:59 −16:42:58",
         btn:         "Récupérer coordonnées",
         try:         "Essayez :",
-        footer:      'Données via <a href="https://simbad.cds.unistra.fr/" target="_blank">SIMBAD</a> (CDS, Strasbourg) &nbsp;·&nbsp; Frontières IAU / Roman (1987) / Delporte (1930)',
+        footer:      'Données via <a href="https://simbad.cds.unistra.fr/">SIMBAD</a> (CDS, Strasbourg) &nbsp;·&nbsp; Frontières IAU / Roman (1987) / Delporte (1930)',
         coordHint:   'Ou entrez des coordonnées : <code>101.287 −16.716</code> (degrés décimaux) &nbsp;·&nbsp; <code>06:44:59 −16:42:58</code> (sexagésimal) &nbsp;·&nbsp; <code>06h44m59s −16d42m58s</code> (h m s / d m s)',
         dstLbl:      'Heure d\'été (DST +1h)',
         localTLabel: 'Heure locale',
@@ -1857,7 +1857,7 @@ def _render_result(result):
     <span class="ib-val ib-const" style="font-size:.75rem;color:var(--ink-dim)">{desc[:120]}…</span>
   </div>
   <div style="margin-left:auto;align-self:center">
-    <a class="simbad-link" href="{simbad_url}" target="_blank" rel="noopener">{simbad_txt}</a>
+    <a class="simbad-link" href="{simbad_url}">{simbad_txt}</a>
   </div>
 </div>
 <div class="vis-card">{vis_note}</div>
